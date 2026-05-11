@@ -8,6 +8,7 @@
     <!-- External Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,700&display=swap" rel="stylesheet">
@@ -97,9 +98,10 @@
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .drag-over { border: 2px dashed var(--nomaro-orange) !important; opacity: 0.5; }
 
-        /* Print Styles for PDF Export */
+        /* Print Styles for Native PDF Export */
         @media print {
-            body, main {
+            @page { margin: 10mm; size: auto; }
+            html, body {
                 height: auto !important;
                 overflow: visible !important;
                 background-color: #0f0f10 !important;
@@ -107,23 +109,31 @@
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
-            nav, .no-print, #addContentModal, #addMonthModal, #loadModal {
+            nav, .no-print, #addContentModal, #addMonthModal, #toast {
                 display: none !important;
             }
-            .print-section {
-                page-break-before: always;
-                width: 100vw;
-                padding: 2rem 0;
+            #main-content {
+                height: auto !important;
+                overflow: visible !important;
+                padding: 0 !important;
             }
-            .print-section:first-child {
-                page-break-before: auto;
+            .print-section {
+                page-break-after: always;
+                break-after: page;
+                width: 100%;
+                padding-top: 1rem;
+                padding-bottom: 2rem;
+            }
+            .print-section:last-child {
+                page-break-after: auto;
+                break-after: auto;
             }
             .fade-in { animation: none !important; opacity: 1 !important; transform: none !important; }
             .break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
         }
     </style>
 </head>
-<body class="flex flex-col md:flex-row h-screen overflow-hidden">
+<body id="app-body" class="flex flex-col md:flex-row h-screen overflow-hidden">
 
     <!-- Sidebar Navigation -->
     <nav class="w-full md:w-72 bg-[#0f0f10] border-b md:border-b-0 md:border-r border-[#3f3f46] flex flex-col shrink-0 z-50">
@@ -141,19 +151,19 @@
         </div>
 
         <div class="flex flex-col p-6 md:p-8 border-t border-[#3f3f46] bg-[#0f0f10] shrink-0 gap-3">
-            <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest mb-1">Data & Export</p>
+            <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest mb-1">State Management</p>
             <div class="flex gap-2">
-                <button onclick="saveVersion()" class="flex-1 bg-[#1a1a1c] hover:bg-[#3f3f46] border border-[#3f3f46] text-[#fafafa] font-tech text-[10px] uppercase tracking-widest py-2 rounded transition-colors">Save</button>
-                <button onclick="openLoadModal()" class="flex-1 bg-[#1a1a1c] hover:bg-[#3f3f46] border border-[#3f3f46] text-[#fafafa] font-tech text-[10px] uppercase tracking-widest py-2 rounded transition-colors">Load</button>
+                <button onclick="saveToDirectory()" class="flex-1 bg-[#1a1a1c] hover:bg-[#3f3f46] border border-[#3f3f46] text-[#fafafa] font-tech text-[10px] uppercase tracking-widest py-2 rounded transition-colors" title="Save JSON to local repo directory">Save File</button>
+                <button onclick="loadFromDirectory()" class="flex-1 bg-[#1a1a1c] hover:bg-[#3f3f46] border border-[#3f3f46] text-[#fafafa] font-tech text-[10px] uppercase tracking-widest py-2 rounded transition-colors" title="Load JSON from local repo directory">Load File</button>
             </div>
-            <button onclick="exportPDF()" class="w-full bg-[#f15e27] hover:bg-[#d44c1a] text-white font-tech text-[10px] uppercase tracking-widest py-2.5 rounded transition-colors mt-1 shadow-lg">
-                Export to PDF
+            <button onclick="exportPDF()" class="w-full bg-[#f15e27] hover:bg-[#d44c1a] text-white font-tech text-[10px] uppercase tracking-widest py-2.5 rounded transition-colors mt-2 shadow-lg">
+                Generate Master PDF
             </button>
             
             <div class="flex flex-col gap-1 mt-4 border-t border-[#3f3f46] pt-4 text-xs text-[#5e5e63] font-tech">
                 <span class="text-[#f15e27] font-bold tracking-widest uppercase text-[10px]">Confidential</span>
-                <span contenteditable="true" onblur="updateDB('exec.docTitle', this)">Omnichannel Rollout</span>
-                <span contenteditable="true" onblur="updateDB('exec.docVersion', this)">v8.0.1</span>
+                <span contenteditable="true" onblur="updateDB('exec.docTitle', this)" id="docTitle">Omnichannel Rollout</span>
+                <span contenteditable="true" onblur="updateDB('exec.docVersion', this)">v9.1.0</span>
             </div>
         </div>
     </nav>
@@ -163,18 +173,8 @@
         <!-- Views injected via JS -->
     </main>
 
-    <!-- Load Version Modal -->
-    <div id="loadModal" class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4 fade-in no-print">
-        <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-xl p-6 md:p-8 max-w-sm w-full text-[#fafafa] relative shadow-2xl">
-            <button onclick="closeLoadModal()" class="absolute top-5 right-5 text-[#5e5e63] hover:text-[#fafafa] hover:bg-[#f15e27] hover:border-[#f15e27] transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-[#0f0f10] border border-[#3f3f46] text-lg leading-none pb-1">&times;</button>
-            <h3 class="text-2xl font-editorial italic mb-2">Load Strategy Version</h3>
-            <p class="text-[10px] font-tech text-[#a1a1aa] mb-6 uppercase tracking-widest border-b border-[#3f3f46] pb-4">Select a saved workspace</p>
-            
-            <div id="loadVersionList" class="flex flex-col gap-2 max-h-[40vh] overflow-y-auto">
-                <!-- Versions injected here -->
-            </div>
-        </div>
-    </div>
+    <!-- Hidden Input for Fallback File Import -->
+    <input type="file" id="importFile" accept=".json" onchange="importDataFallback(event)" class="hidden">
 
     <!-- Add Month Modal -->
     <div id="addMonthModal" class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4 fade-in no-print">
@@ -237,11 +237,13 @@
 
     <script>
         // --- 1. UTILITIES & GLOBALLY EDITABLE DATA BINDING ---
-        // Converts strings back to numbers handling formatting properly
-        function parseLakhs(str) {
-            let numStr = str.toString().replace(/[^0-9.-]/g, '');
-            if (!numStr) return 0;
-            return parseFloat(numStr);
+        function parseFullDigits(str) {
+            let numStr = str.toString().replace(/[^0-9]/g, '');
+            return parseInt(numStr, 10) || 0;
+        }
+
+        function formatINR(num) {
+            return Number(num).toLocaleString('en-IN');
         }
 
         function showToast(message) {
@@ -265,83 +267,129 @@
         };
 
         window.updateBudget = function(mIndex, pIndex, el) {
-            let val = parseFloat(el.innerText);
-            if (isNaN(val)) val = 0;
-            window.db.months[mIndex].phases[pIndex].budget = val.toString();
+            let val = parseFullDigits(el.innerText);
+            window.db.months[mIndex].phases[pIndex].budget = val;
             autoSave();
             navigate(state.view); 
         };
 
         window.updateProdBudget = function(i, el) {
-            let val = parseFloat(el.innerText);
-            if (isNaN(val)) val = 0;
-            window.db.production[i].budget = val.toString();
+            let val = parseFullDigits(el.innerText);
+            window.db.production[i].budget = val;
             autoSave();
             navigate(state.view);
         }
 
-        // --- 1B. SAVE / LOAD / EXPORT LOGIC ---
+        // --- 1B. FILE SYSTEM SAVE / LOAD LOGIC ---
         function autoSave() {
             localStorage.setItem('nomaro_autosave', JSON.stringify(window.db));
         }
 
-        window.saveVersion = function() {
-            const vName = prompt("Enter a name for this strategy version:");
-            if(!vName) return;
-            let versions = JSON.parse(localStorage.getItem('nomaro_versions') || '{}');
-            versions[vName] = window.db;
-            localStorage.setItem('nomaro_versions', JSON.stringify(versions));
-            showToast(`Version '${vName}' saved`);
-        }
-
-        window.openLoadModal = function() {
-            let versions = JSON.parse(localStorage.getItem('nomaro_versions') || '{}');
-            const keys = Object.keys(versions);
-            const list = document.getElementById('loadVersionList');
-            
-            if(keys.length === 0) {
-                list.innerHTML = '<p class="text-sm font-primary text-[#5e5e63] italic">No saved custom versions found.</p>';
-            } else {
-                list.innerHTML = keys.map(k => `
-                    <div class="flex justify-between items-center p-4 bg-[#0f0f10] border border-[#3f3f46] rounded-lg mb-3 last:mb-0">
-                        <span class="text-sm font-primary font-bold text-[#fafafa] break-words whitespace-normal min-w-0 flex-grow pr-4">${k}</span>
-                        <div class="flex gap-3 shrink-0">
-                            <button onclick="loadSpecificVersion('${k}')" class="text-[10px] font-tech uppercase tracking-widest text-[#f15e27] hover:text-[#fafafa] transition-colors">Load</button>
-                            <button onclick="deleteSpecificVersion('${k}')" class="text-[10px] font-tech uppercase tracking-widest text-[#5e5e63] hover:text-red-500 transition-colors">Del</button>
-                        </div>
-                    </div>
-                `).join('');
+        window.saveToDirectory = async function() {
+            try {
+                if ('showSaveFilePicker' in window) {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: 'nomaro_strategy_state.json',
+                        types: [{ description: 'JSON File', accept: { 'application/json': ['.json'] } }]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(JSON.stringify(window.db, null, 2));
+                    await writable.close();
+                    showToast('File saved to local directory!');
+                } else {
+                    // Fallback for browsers lacking File System Access API
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.db, null, 2));
+                    const dl = document.createElement('a');
+                    dl.setAttribute("href", dataStr);
+                    dl.setAttribute("download", "nomaro_strategy_state.json");
+                    document.body.appendChild(dl);
+                    dl.click();
+                    dl.remove();
+                    showToast('File downloaded!');
+                }
+            } catch(err) {
+                console.error(err);
+                if(err.name !== 'AbortError') showToast('Save failed.');
             }
-            document.getElementById('loadModal').classList.remove('hidden');
-        }
+        };
 
-        window.closeLoadModal = function() {
-            document.getElementById('loadModal').classList.add('hidden');
-        }
-
-        window.loadSpecificVersion = function(k) {
-            let versions = JSON.parse(localStorage.getItem('nomaro_versions') || '{}');
-            if(versions[k]) {
-                window.db = versions[k];
-                autoSave();
-                navigate(state.view);
-                closeLoadModal();
-                showToast(`Loaded version: ${k}`);
+        window.loadFromDirectory = async function() {
+            try {
+                if ('showOpenFilePicker' in window) {
+                    const [handle] = await window.showOpenFilePicker({
+                        types: [{ description: 'JSON File', accept: { 'application/json': ['.json'] } }]
+                    });
+                    const file = await handle.getFile();
+                    const contents = await file.text();
+                    processImport(contents);
+                } else {
+                    // Fallback
+                    document.getElementById('importFile').click();
+                }
+            } catch(err) {
+                console.error(err);
+                if(err.name !== 'AbortError') showToast('Load failed.');
             }
+        };
+
+        window.processImport = function(jsonString) {
+            try {
+                const importedDb = JSON.parse(jsonString);
+                if (importedDb && importedDb.exec && importedDb.months) {
+                    window.db = migrateData(importedDb);
+                    autoSave();
+                    navigate(state.view);
+                    const dt = document.getElementById('docTitle');
+                    if(dt) dt.innerText = window.db.exec.docTitle || "Omnichannel Rollout";
+                    showToast('Strategy loaded successfully!');
+                } else {
+                    showToast('Error: Invalid JSON format');
+                }
+            } catch (err) {
+                showToast('Error parsing JSON file');
+            }
+        };
+
+        window.importDataFallback = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                processImport(e.target.result);
+            };
+            reader.readAsText(file);
+            event.target.value = ''; 
+        };
+
+        // --- MIGRATION UTILITY ---
+        // Converts old "35" or "18.5" Lakh budgets into pure digits (3500000)
+        function migrateData(dataObj) {
+            if(dataObj.months) {
+                dataObj.months.forEach(m => m.phases.forEach(p => {
+                    if (typeof p.budget === 'string' && parseFloat(p.budget) < 1000) {
+                        p.budget = parseFloat(p.budget) * 100000;
+                    }
+                }));
+            }
+            if(dataObj.production) {
+                dataObj.production.forEach(p => {
+                    if (typeof p.budget === 'string' && parseFloat(p.budget) < 1000) {
+                        p.budget = parseFloat(p.budget) * 100000;
+                    }
+                });
+            }
+            return dataObj;
         }
 
-        window.deleteSpecificVersion = function(k) {
-            let versions = JSON.parse(localStorage.getItem('nomaro_versions') || '{}');
-            delete versions[k];
-            localStorage.setItem('nomaro_versions', JSON.stringify(versions));
-            openLoadModal(); // refresh list
-        }
-
+        // Native Direct Print PDF Export
         window.exportPDF = function() {
-            const main = document.getElementById('main-content');
             const currentView = state.view;
+            showToast('Preparing PDF layout for printing...');
             
-            // Prepare DOM for full print by stacking all views
+            Chart.defaults.animation = false;
+            document.getElementById('app-body').classList.remove('h-screen', 'overflow-hidden');
+
+            const main = document.getElementById('main-content');
             main.innerHTML = '';
             
             const v1 = document.createElement('div'); v1.className = 'print-section';
@@ -353,19 +401,49 @@
             main.appendChild(v2);
             main.appendChild(v3);
             main.appendChild(v4);
-            
+
+            const originalMonthFilter = state.monthFilter;
+            const originalMonthId = state.monthId;
+            state.monthFilter = 'All';
+
             renderExec(v1);
-            renderRoadmap(v2);
+            
+            v2.innerHTML = '<h2 class="text-5xl font-editorial italic mb-8 text-[#fafafa] w-full border-b border-[#3f3f46] pb-4">Master Strategic Roadmap</h2>';
+            window.db.months.filter(m => m.active).forEach(m => {
+                const mDiv = document.createElement('div');
+                mDiv.className = 'mb-12 break-inside-avoid';
+                v2.appendChild(mDiv);
+                
+                state.monthId = m.id;
+                renderRoadmap(mDiv);
+                
+                const headersToHide = mDiv.querySelectorAll('h2, .py-2, .bg-\\[\\#1a1a1c\\].flex.flex-wrap, .no-print');
+                headersToHide.forEach(h => h.style.display = 'none');
+                
+                const monthHeader = document.createElement('h3');
+                monthHeader.className = 'text-3xl font-tech text-[#f15e27] mb-6 uppercase tracking-widest';
+                monthHeader.innerText = m.name;
+                mDiv.insertBefore(monthHeader, mDiv.firstChild);
+            });
+
             renderProduction(v3);
             renderContent(v4);
             
-            showToast('Preparing PDF layout...');
+            // Hide all remaining no-print elements
+            main.querySelectorAll('.no-print, button:not(.nav-btn)').forEach(el => {
+                el.style.display = 'none';
+            });
             
-            // Give charts time to render on canvases before triggering print dialog
+            state.monthFilter = originalMonthFilter;
+            state.monthId = originalMonthId;
+
             setTimeout(() => {
                 window.print();
-                navigate(currentView); // Restore SPA state
-            }, 800);
+                
+                document.getElementById('app-body').classList.add('h-screen', 'overflow-hidden');
+                Chart.defaults.animation = true;
+                navigate(currentView); 
+            }, 1000);
         }
 
         // --- 2. DATA STORE ---
@@ -376,14 +454,14 @@
                 timeline: "May 15 (Shopify) → July 1 (Amazon)",
                 summary: "This dashboard outlines the Go-To-Market strategy, balancing aesthetic appeal with highly engineered product delivery. Use the breakdown below to review or modify capital allocations instantly.",
                 docTitle: "Omnichannel Rollout",
-                docVersion: "v8.0.0"
+                docVersion: "v9.1.0"
             },
             months: [
                 {
                     id: 1, name: "May 2026", active: true,
                     phases: [
                         {
-                            id: 101, title: "Digital Flagship Soft Launch", budget: "35",
+                            id: 101, title: "Digital Flagship Soft Launch", budget: 3500000,
                             audience: "Waitlist Subscribers, Early Adopters",
                             kpis: ["Shopify Store Live", "10,000 Early Site Visitors"],
                             actions: [
@@ -398,7 +476,7 @@
                     id: 2, name: "June 2026", active: true,
                     phases: [
                         {
-                            id: 201, title: "Marketplace Preparation", budget: "18.5",
+                            id: 201, title: "Marketplace Preparation", budget: 1850000,
                             audience: "Broad Urban Commuters, Amazon Shoppers",
                             kpis: ["Setup Amazon A+ Content", "Generate Top 50 keywords list"],
                             actions: [
@@ -413,7 +491,7 @@
                     id: 3, name: "July 2026", active: true,
                     phases: [
                         {
-                            id: 301, title: "Amazon Hard Launch", budget: "20",
+                            id: 301, title: "Amazon Hard Launch", budget: 2000000,
                             audience: "Amazon Shoppers, Prime Members",
                             kpis: ["July 1 Amazon Launch", "First 100 Authentic Reviews"],
                             actions: [
@@ -428,7 +506,7 @@
                     id: 4, name: "August 2026", active: true,
                     phases: [
                         {
-                            id: 401, title: "Shared Journeys UGC", budget: "35",
+                            id: 401, title: "Shared Journeys UGC", budget: 3500000,
                             audience: "Broad Market, Remarketing Pool",
                             kpis: ["15,000 New Followers", "500+ Authentic Reviews"],
                             actions: [
@@ -441,11 +519,11 @@
                 }
             ],
             production: [
-                { id: 1, cat: "Physical Shoot", title: "Campaign Cinema", desc: "3-day shoot capturing narrative 'Transitions' brand films. Focus on emotional storytelling.", date: "May 5-8, 2026", budget: "15" },
-                { id: 2, cat: "Physical Shoot", title: "E-Commerce Catalogue", desc: "Studio environment. Macro focus on functional details, YKK zips, and interior capacity.", date: "May 10-11, 2026", budget: "4.5" },
-                { id: 3, cat: "Physical Shoot", title: "Lifestyle & UGC Capture", desc: "Raw, unpolished environments for Meta/TikTok ads. Mobile-first framing.", date: "May 12, 2026", budget: "3" },
-                { id: 4, cat: "Post-Production", title: "Hero Film Edit", desc: "Color grading, sound design (ASMR focus), and master formatting for 16:9 and 9:16.", date: "May 15-25, 2026", budget: "2.5" },
-                { id: 5, cat: "Post-Production", title: "Social Ad Cutdowns", desc: "15s, 30s high-hook variations optimized for fast-paced vertical feeds.", date: "May 26-28, 2026", budget: "1.5" }
+                { id: 1, cat: "Physical Shoot", title: "Campaign Cinema", desc: "3-day shoot capturing narrative 'Transitions' brand films. Focus on emotional storytelling.", date: "May 5-8, 2026", budget: 1500000 },
+                { id: 2, cat: "Physical Shoot", title: "E-Commerce Catalogue", desc: "Studio environment. Macro focus on functional details, YKK zips, and interior capacity.", date: "May 10-11, 2026", budget: 450000 },
+                { id: 3, cat: "Physical Shoot", title: "Lifestyle & UGC Capture", desc: "Raw, unpolished environments for Meta/TikTok ads. Mobile-first framing.", date: "May 12, 2026", budget: 300000 },
+                { id: 4, cat: "Post-Production", title: "Hero Film Edit", desc: "Color grading, sound design (ASMR focus), and master formatting for 16:9 and 9:16.", date: "May 15-25, 2026", budget: 250000 },
+                { id: 5, cat: "Post-Production", title: "Social Ad Cutdowns", desc: "15s, 30s high-hook variations optimized for fast-paced vertical feeds.", date: "May 26-28, 2026", budget: 150000 }
             ],
             calendar: [
                 { m: "May 2026", d: "May 1", time: "09:00 AM IST", t: "Behind the Scenes", v: "Teaser photo from the first product shoot. Studio lighting, blurry product.", r: "Builds early hype and shows momentum by sharing the physical production process.", c: "Bringing the companion to life. Day 1 on set.", plats: { ...platformDefaults(), instagram: true } },
@@ -458,7 +536,7 @@
 
         const autosaved = localStorage.getItem('nomaro_autosave');
         if (autosaved) {
-            window.db = JSON.parse(autosaved);
+            window.db = migrateData(JSON.parse(autosaved));
         } else {
             window.db = defaultDb;
         }
@@ -489,6 +567,9 @@
             if(!state.monthId) state.monthId = getDefaultMonthId();
             renderNav();
             navigate('exec');
+            
+            const dt = document.getElementById('docTitle');
+            if(dt) dt.innerText = window.db.exec.docTitle || "Omnichannel Rollout";
         };
 
         function renderNav() {
@@ -522,20 +603,19 @@
             }
         }
 
-        // View 1: Project Overview (Read-Only Face)
+        // View 1: Project Overview 
         function renderExec(container) {
-            let totalLakhs = 0;
-            let totalProdLakhs = 0;
+            let totalDigits = 0;
+            let totalProdDigits = 0;
             const phaseList = [];
             const chartLabels = [];
             const chartData = [];
             const timelineEvents = [];
 
-            // Gather Roadmap Data
             window.db.months.filter(m => m.active).forEach(m => {
                 m.phases.forEach(p => {
-                    const b = parseLakhs(p.budget);
-                    totalLakhs += b;
+                    const b = parseInt(p.budget) || 0;
+                    totalDigits += b;
                     phaseList.push({ month: m.name, title: p.title, budget: b });
                     chartLabels.push(p.title);
                     chartData.push(b);
@@ -543,15 +623,15 @@
                 });
             });
 
-            // Gather Production Data
             window.db.production.forEach(p => {
-                const b = parseLakhs(p.budget);
-                totalProdLakhs += b;
-                totalLakhs += b;
+                const b = parseInt(p.budget) || 0;
+                totalProdDigits += b;
+                totalDigits += b;
                 timelineEvents.push({ date: p.date, type: 'Production', title: p.title });
             });
             
-            const totalCr = (totalLakhs / 100).toFixed(2);
+            const totalLakhs = (totalDigits / 100000).toFixed(2);
+            const totalCr = (totalDigits / 10000000).toFixed(2);
 
             const phaseBreakdowns = phaseList.map((p) => `
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 border-b border-[#3f3f46] last:border-0 gap-2 sm:gap-4 w-full">
@@ -560,12 +640,11 @@
                         <span class="text-sm font-primary text-[#fafafa] break-words whitespace-normal leading-relaxed block w-full mt-1">${p.title}</span>
                     </div>
                     <span class="text-sm font-tech font-bold text-[#fafafa] flex items-center gap-1 shrink-0 mt-1 sm:mt-0 whitespace-nowrap">
-                        <span class="text-[#a1a1aa] font-normal text-[10px] mr-1">INR</span> ${p.budget} L
+                        <span class="text-[#a1a1aa] font-normal text-[10px] mr-1">INR</span> ${formatINR(p.budget)}
                     </span>
                 </div>
             `).join('');
 
-            // Master Timeline
             const masterTimelineHtml = timelineEvents.map(e => `
                 <div class="border-l-2 ${e.type === 'Phase' ? 'border-[#f15e27]' : 'border-[#5e5e63]'} pl-4 py-3 mb-4 last:mb-0 w-full">
                     <span class="text-[10px] font-tech uppercase tracking-widest ${e.type === 'Phase' ? 'text-[#f15e27]' : 'text-[#5e5e63]'} block mb-2 break-words">${e.date} &bull; ${e.type}</span>
@@ -586,7 +665,7 @@
 
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8 w-full items-start">
                         <!-- Left Col: Budgets -->
-                        <div class="lg:col-span-5 flex flex-col w-full bg-[#1a1a1c] p-6 md:p-8 rounded-xl border border-[#3f3f46]">
+                        <div class="lg:col-span-5 flex flex-col w-full bg-[#1a1a1c] p-6 md:p-8 rounded-xl border border-[#3f3f46] avoid-break break-inside-avoid">
                             <div class="w-full">
                                 <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest mb-2 block">Total Capital Allocation</p>
                                 <p class="text-4xl font-primary font-bold text-[#fafafa] mb-1 block w-full break-words">${totalLakhs} Lakhs</p>
@@ -596,7 +675,7 @@
                             <div class="pt-6 border-t border-[#3f3f46] w-full">
                                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
                                     <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Phase-wise Allocation</p>
-                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Total: ${totalLakhs - totalProdLakhs} L</p>
+                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Total: ${formatINR(totalDigits - totalProdDigits)}</p>
                                 </div>
                                 <div class="flex flex-col w-full">
                                     ${phaseBreakdowns || `<p class="text-sm text-[#5e5e63] italic w-full">No phases scheduled.</p>`}
@@ -606,7 +685,7 @@
                             <div class="pt-6 border-t border-[#3f3f46] mt-4 w-full">
                                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
                                     <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Media Production</p>
-                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Total: ${totalProdLakhs} L</p>
+                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Total: ${formatINR(totalProdDigits)}</p>
                                 </div>
                                 <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed w-full break-words">Includes all physical shoots and post-production editing allocated in the Media Production section.</p>
                             </div>
@@ -615,14 +694,14 @@
                         <!-- Right Col: Charts & Master Timeline -->
                         <div class="lg:col-span-7 flex flex-col gap-8 w-full">
                             
-                            <div class="bg-[#1a1a1c] p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full">
+                            <div class="bg-[#1a1a1c] p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full avoid-break break-inside-avoid">
                                 <h3 class="text-sm font-primary font-bold block mb-4 w-full break-words">Capital Distribution by Phase</h3>
                                 <div class="chart-container w-full">
                                     <canvas id="bChartDonut"></canvas>
                                 </div>
                             </div>
 
-                            <div class="bg-[#1a1a1c] p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full">
+                            <div class="bg-[#1a1a1c] p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full avoid-break break-inside-avoid">
                                 <h3 class="text-sm font-primary font-bold block mb-6 w-full break-words">Strategic Timeline</h3>
                                 <div class="flex flex-col w-full">
                                     ${masterTimelineHtml || `<p class="text-sm text-[#5e5e63] italic w-full">No timeline events generated.</p>`}
@@ -635,18 +714,19 @@
             `;
             
             if (chartData.length > 0) {
+                const cColors = ['#f15e27', '#fafafa', '#a1a1aa', '#5e5e63', '#fdba74', '#fb923c'];
                 const ctxDonut = document.getElementById('bChartDonut').getContext('2d');
                 chart1Instance = new Chart(ctxDonut, {
                     type: 'doughnut',
                     data: { 
                         labels: chartLabels, 
-                        datasets: [{ data: chartData, backgroundColor: ['#f15e27', '#fafafa', '#a1a1aa', '#5e5e63', '#fdba74', '#fb923c'], borderColor: '#1a1a1c', borderWidth: 2 }] 
+                        datasets: [{ data: chartData, backgroundColor: cColors, borderColor: '#1a1a1c', borderWidth: 3 }] 
                     },
                     options: { 
-                        responsive: true, maintainAspectRatio: false, cutout: '70%', 
+                        responsive: true, maintainAspectRatio: false, cutout: '75%', 
                         plugins: { 
-                            legend: { display: true, position: window.innerWidth < 1024 ? 'bottom' : 'right', labels: {color: '#a1a1aa', padding: 15, font: { family: "'Plus Jakarta Sans', sans-serif" }} },
-                            tooltip: { backgroundColor: '#0f0f10', padding: 12, titleFont: { family: "'Plus Jakarta Sans', sans-serif" }, bodyFont: { family: "'Plus Jakarta Sans', sans-serif" }, callbacks: { label: (ctx) => ` ${ctx.raw} Lakhs` } }
+                            legend: { display: true, position: window.innerWidth < 1024 ? 'bottom' : 'right', labels: {color: '#fafafa', padding: 15, font: { family: "'Plus Jakarta Sans', sans-serif" }} },
+                            tooltip: { backgroundColor: '#0f0f10', padding: 12, titleFont: { family: "'Plus Jakarta Sans', sans-serif" }, bodyFont: { family: "'Plus Jakarta Sans', sans-serif" }, callbacks: { label: (ctx) => ` ${(ctx.raw/100000).toFixed(2)} Lakhs` } }
                         } 
                     }
                 });
@@ -753,7 +833,7 @@
                             <h3 class="text-2xl font-primary font-bold text-[#fafafa] block w-full break-words whitespace-normal min-w-0 border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.title', this)">${p.title}</h3>
                         </div>
                         <div class="bg-[#1a1a1c] border border-[#3f3f46] px-4 py-2 rounded-lg w-full md:w-auto flex items-center gap-3 shrink-0">
-                            <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest shrink-0">Capital (Lakhs INR):</p>
+                            <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest shrink-0">Capital (INR):</p>
                             <p class="text-lg font-tech font-bold text-[#fafafa] min-w-[30px] border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateBudget(${mIndex}, ${pIndex}, this)">${p.budget}</p>
                         </div>
                     </div>
@@ -843,7 +923,7 @@
                     <div class="pt-5 border-t border-[#3f3f46] mt-auto w-full min-w-0 flex justify-between items-center">
                         <span class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] block">Allocated Budget</span>
                         <p class="font-tech text-lg text-[#fafafa] flex items-center gap-1">
-                            <span class="text-[10px] text-[#a1a1aa] font-normal">INR Lakhs</span> 
+                            <span class="text-[10px] text-[#a1a1aa] font-normal">INR</span> 
                             <span class="border border-transparent focus:border-b-[#f15e27] min-w-[30px] text-right" contenteditable="true" onblur="updateProdBudget(${i}, this)">${p.budget}</span>
                         </p>
                     </div>
