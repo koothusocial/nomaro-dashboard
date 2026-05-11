@@ -109,7 +109,7 @@
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
-            nav, .no-print, #addContentModal, #addMonthModal, #toast {
+            nav, .no-print, #addContentModal, #addMonthModal, #loadModal, #toast {
                 display: none !important;
             }
             #main-content {
@@ -153,8 +153,12 @@
         <div class="flex flex-col p-6 md:p-8 border-t border-[#3f3f46] bg-[#0f0f10] shrink-0 gap-3">
             <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest mb-1">State Management</p>
             <div class="flex gap-2">
-                <button onclick="saveToDirectory()" class="flex-1 bg-[#1a1a1c] hover:bg-[#3f3f46] border border-[#3f3f46] text-[#fafafa] font-tech text-[10px] uppercase tracking-widest py-2 rounded transition-colors" title="Save JSON to local repo directory">Save File</button>
-                <button onclick="loadFromDirectory()" class="flex-1 bg-[#1a1a1c] hover:bg-[#3f3f46] border border-[#3f3f46] text-[#fafafa] font-tech text-[10px] uppercase tracking-widest py-2 rounded transition-colors" title="Load JSON from local repo directory">Load File</button>
+                <button onclick="saveVersion()" class="flex-1 bg-[#1a1a1c] hover:bg-[#3f3f46] border border-[#3f3f46] text-[#fafafa] font-tech text-[10px] uppercase tracking-widest py-2 rounded transition-colors" title="Save locally to browser cache">Save Cache</button>
+                <button onclick="openLoadModal()" class="flex-1 bg-[#1a1a1c] hover:bg-[#3f3f46] border border-[#3f3f46] text-[#fafafa] font-tech text-[10px] uppercase tracking-widest py-2 rounded transition-colors" title="Load from browser cache">Load Cache</button>
+            </div>
+            <div class="flex gap-2 mt-1">
+                <button onclick="exportData()" class="flex-1 bg-[#1a1a1c] hover:bg-[#3f3f46] border border-[#3f3f46] text-[#fafafa] font-tech text-[10px] uppercase tracking-widest py-2 rounded transition-colors" title="Download JSON file">Download</button>
+                <button onclick="triggerImport()" class="flex-1 bg-[#1a1a1c] hover:bg-[#3f3f46] border border-[#3f3f46] text-[#fafafa] font-tech text-[10px] uppercase tracking-widest py-2 rounded transition-colors" title="Upload JSON file">Upload</button>
             </div>
             <button onclick="exportPDF()" class="w-full bg-[#f15e27] hover:bg-[#d44c1a] text-white font-tech text-[10px] uppercase tracking-widest py-2.5 rounded transition-colors mt-2 shadow-lg">
                 Generate Master PDF
@@ -162,24 +166,38 @@
             
             <div class="flex flex-col gap-1 mt-4 border-t border-[#3f3f46] pt-4 text-xs text-[#5e5e63] font-tech">
                 <span class="text-[#f15e27] font-bold tracking-widest uppercase text-[10px]">Confidential</span>
-                <span contenteditable="true" onblur="updateDB('exec.docTitle', this)" id="docTitle">Omnichannel Rollout</span>
-                <span contenteditable="true" onblur="updateDB('exec.docVersion', this)">v9.1.0</span>
+                <span contenteditable="true" onblur="updateDB('exec.docTitle', this)" id="docTitle">MADE BY KOOTHU</span>
+                <span contenteditable="true" onblur="updateDB('exec.docVersion', this)">v1.0.0</span>
+                <button onclick="clearCache()" class="text-left mt-2 hover:text-red-500 transition-colors uppercase tracking-widest text-[10px]">Clear Cache</button>
             </div>
         </div>
     </nav>
 
     <!-- Main Content Area -->
-    <main class="flex-grow overflow-y-auto bg-[#0f0f10] p-4 sm:p-8 md:p-12 relative w-full" id="main-content">
+    <main class="flex-grow overflow-y-auto bg-[#0f0f10] p-4 sm:p-8 md:p-12 relative w-full min-w-0" id="main-content">
         <!-- Views injected via JS -->
     </main>
 
-    <!-- Hidden Input for Fallback File Import -->
-    <input type="file" id="importFile" accept=".json" onchange="importDataFallback(event)" class="hidden">
+    <!-- Hidden Input for File Import -->
+    <input type="file" id="importFile" accept=".json" onchange="importData(event)" class="hidden">
+
+    <!-- Load Version Modal -->
+    <div id="loadModal" class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4 fade-in no-print">
+        <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-xl p-6 md:p-8 max-w-sm w-full text-[#fafafa] relative shadow-2xl">
+            <button onclick="closeLoadModal()" class="absolute top-5 right-5 text-[#5e5e63] hover:text-[#fafafa] hover:bg-[#f15e27] hover:border-[#f15e27] transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-[#0f0f10] border border-[#3f3f46] text-xl leading-none pb-1">&times;</button>
+            <h3 class="text-2xl font-editorial italic mb-2">Load Strategy Version</h3>
+            <p class="text-[10px] font-tech text-[#a1a1aa] mb-6 uppercase tracking-widest border-b border-[#3f3f46] pb-4">Select a saved browser cache</p>
+            
+            <div id="loadVersionList" class="flex flex-col gap-2 max-h-[40vh] overflow-y-auto pr-2">
+                <!-- Versions injected here -->
+            </div>
+        </div>
+    </div>
 
     <!-- Add Month Modal -->
     <div id="addMonthModal" class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4 fade-in no-print">
         <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-xl p-6 md:p-8 max-w-sm w-full text-[#fafafa] relative shadow-2xl">
-            <button onclick="closeAddMonthModal()" class="absolute top-5 right-5 text-[#5e5e63] hover:text-[#fafafa] hover:bg-[#f15e27] hover:border-[#f15e27] transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-[#0f0f10] border border-[#3f3f46] text-lg leading-none pb-1">&times;</button>
+            <button onclick="closeAddMonthModal()" class="absolute top-5 right-5 text-[#5e5e63] hover:text-[#fafafa] hover:bg-[#f15e27] hover:border-[#f15e27] transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-[#0f0f10] border border-[#3f3f46] text-xl leading-none pb-1">&times;</button>
             <h3 class="text-2xl font-editorial italic mb-2">Add Timeline Month</h3>
             <p class="text-[10px] font-tech text-[#a1a1aa] mb-6 uppercase tracking-widest border-b border-[#3f3f46] pb-4">Expand the roadmap</p>
             
@@ -199,7 +217,7 @@
     <!-- Add Content Modal -->
     <div id="addContentModal" class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4 fade-in no-print">
         <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-xl p-6 md:p-8 max-w-lg w-full text-[#fafafa] relative shadow-2xl max-h-[90vh] overflow-y-auto">
-            <button onclick="closeAddContentModal()" class="absolute top-5 right-5 text-[#5e5e63] hover:text-[#fafafa] hover:bg-[#f15e27] hover:border-[#f15e27] transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-[#0f0f10] border border-[#3f3f46] text-lg leading-none pb-1">&times;</button>
+            <button onclick="closeAddContentModal()" class="absolute top-5 right-5 text-[#5e5e63] hover:text-[#fafafa] hover:bg-[#f15e27] hover:border-[#f15e27] transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-[#0f0f10] border border-[#3f3f46] text-xl leading-none pb-1">&times;</button>
             <h3 class="text-2xl font-editorial italic mb-2">Schedule Deliverable</h3>
             <p class="text-[10px] font-tech text-[#a1a1aa] mb-6 uppercase tracking-widest border-b border-[#3f3f46] pb-4">Add to Daily Calendar</p>
             
@@ -285,77 +303,109 @@
             localStorage.setItem('nomaro_autosave', JSON.stringify(window.db));
         }
 
-        window.saveToDirectory = async function() {
-            try {
-                if ('showSaveFilePicker' in window) {
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName: 'nomaro_strategy_state.json',
-                        types: [{ description: 'JSON File', accept: { 'application/json': ['.json'] } }]
-                    });
-                    const writable = await handle.createWritable();
-                    await writable.write(JSON.stringify(window.db, null, 2));
-                    await writable.close();
-                    showToast('File saved to local directory!');
-                } else {
-                    // Fallback for browsers lacking File System Access API
-                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.db, null, 2));
-                    const dl = document.createElement('a');
-                    dl.setAttribute("href", dataStr);
-                    dl.setAttribute("download", "nomaro_strategy_state.json");
-                    document.body.appendChild(dl);
-                    dl.click();
-                    dl.remove();
-                    showToast('File downloaded!');
-                }
-            } catch(err) {
-                console.error(err);
-                if(err.name !== 'AbortError') showToast('Save failed.');
+        window.clearCache = function() {
+            if(confirm("Are you sure you want to clear all data and reset to defaults?")) {
+                localStorage.removeItem('nomaro_autosave');
+                localStorage.removeItem('nomaro_versions');
+                window.db = JSON.parse(JSON.stringify(defaultDb)); // Deep clone to reset
+                autoSave();
+                navigate(state.view);
+                const dt = document.getElementById('docTitle');
+                if(dt) dt.innerText = window.db.exec.docTitle;
+                showToast('Cache cleared. Reset to default.');
             }
         };
 
-        window.loadFromDirectory = async function() {
-            try {
-                if ('showOpenFilePicker' in window) {
-                    const [handle] = await window.showOpenFilePicker({
-                        types: [{ description: 'JSON File', accept: { 'application/json': ['.json'] } }]
-                    });
-                    const file = await handle.getFile();
-                    const contents = await file.text();
-                    processImport(contents);
-                } else {
-                    // Fallback
-                    document.getElementById('importFile').click();
-                }
-            } catch(err) {
-                console.error(err);
-                if(err.name !== 'AbortError') showToast('Load failed.');
+        window.saveVersion = function() {
+            const vName = prompt("Enter a name for this strategy version:");
+            if(!vName) return;
+            let versions = JSON.parse(localStorage.getItem('nomaro_versions') || '{}');
+            versions[vName] = window.db;
+            localStorage.setItem('nomaro_versions', JSON.stringify(versions));
+            showToast(`Version '${vName}' saved locally`);
+        }
+
+        window.openLoadModal = function() {
+            let versions = JSON.parse(localStorage.getItem('nomaro_versions') || '{}');
+            const keys = Object.keys(versions);
+            const list = document.getElementById('loadVersionList');
+            
+            if(keys.length === 0) {
+                list.innerHTML = '<p class="text-sm font-primary text-[#5e5e63] italic">No saved custom versions found.</p>';
+            } else {
+                list.innerHTML = keys.map(k => `
+                    <div class="flex justify-between items-center p-4 bg-[#0f0f10] border border-[#3f3f46] rounded-lg mb-3 last:mb-0">
+                        <span class="text-sm font-primary font-bold text-[#fafafa] break-words whitespace-normal min-w-0 flex-grow pr-4">${k}</span>
+                        <div class="flex gap-3 shrink-0">
+                            <button onclick="loadSpecificVersion('${k}')" class="text-[10px] font-tech uppercase tracking-widest text-[#f15e27] hover:text-[#fafafa] transition-colors">Load</button>
+                            <button onclick="deleteSpecificVersion('${k}')" class="text-[10px] font-tech uppercase tracking-widest text-[#5e5e63] hover:text-red-500 transition-colors">Del</button>
+                        </div>
+                    </div>
+                `).join('');
             }
+            document.getElementById('loadModal').classList.remove('hidden');
+        }
+
+        window.closeLoadModal = function() {
+            document.getElementById('loadModal').classList.add('hidden');
+        }
+
+        window.loadSpecificVersion = function(k) {
+            let versions = JSON.parse(localStorage.getItem('nomaro_versions') || '{}');
+            if(versions[k]) {
+                window.db = migrateData(versions[k]);
+                autoSave();
+                navigate(state.view);
+                closeLoadModal();
+                showToast(`Loaded version: ${k}`);
+                const dt = document.getElementById('docTitle');
+                if(dt) dt.innerText = window.db.exec.docTitle || "MADE BY KOOTHU";
+            }
+        }
+
+        window.deleteSpecificVersion = function(k) {
+            let versions = JSON.parse(localStorage.getItem('nomaro_versions') || '{}');
+            delete versions[k];
+            localStorage.setItem('nomaro_versions', JSON.stringify(versions));
+            openLoadModal(); 
+        }
+
+        // External JSON file Export/Import for GitHub hosting
+        window.exportData = function() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.db, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", "nomaro_strategy_state.json");
+            document.body.appendChild(dlAnchorElem);
+            dlAnchorElem.click();
+            dlAnchorElem.remove();
+            showToast('JSON file downloaded to PC');
         };
 
-        window.processImport = function(jsonString) {
-            try {
-                const importedDb = JSON.parse(jsonString);
-                if (importedDb && importedDb.exec && importedDb.months) {
-                    window.db = migrateData(importedDb);
-                    autoSave();
-                    navigate(state.view);
-                    const dt = document.getElementById('docTitle');
-                    if(dt) dt.innerText = window.db.exec.docTitle || "Omnichannel Rollout";
-                    showToast('Strategy loaded successfully!');
-                } else {
-                    showToast('Error: Invalid JSON format');
-                }
-            } catch (err) {
-                showToast('Error parsing JSON file');
-            }
+        window.triggerImport = function() {
+            document.getElementById('importFile').click();
         };
 
-        window.importDataFallback = function(event) {
+        window.importData = function(event) {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                processImport(e.target.result);
+                try {
+                    const importedDb = JSON.parse(e.target.result);
+                    if (importedDb && importedDb.exec && importedDb.months) {
+                        window.db = migrateData(importedDb);
+                        autoSave();
+                        navigate(state.view);
+                        const dt = document.getElementById('docTitle');
+                        if(dt) dt.innerText = window.db.exec.docTitle || "MADE BY KOOTHU";
+                        showToast('JSON strategy imported successfully!');
+                    } else {
+                        showToast('Error: Invalid JSON format');
+                    }
+                } catch (err) {
+                    showToast('Error parsing JSON file');
+                }
             };
             reader.readAsText(file);
             event.target.value = ''; 
@@ -453,15 +503,15 @@
             exec: {
                 timeline: "May 15 (Shopify) → July 1 (Amazon)",
                 summary: "This dashboard outlines the Go-To-Market strategy, balancing aesthetic appeal with highly engineered product delivery. Use the breakdown below to review or modify capital allocations instantly.",
-                docTitle: "Omnichannel Rollout",
-                docVersion: "v9.1.0"
+                docTitle: "MADE BY KOOTHU",
+                docVersion: "v1.0.0"
             },
             months: [
                 {
                     id: 1, name: "May 2026", active: true,
                     phases: [
                         {
-                            id: 101, title: "Digital Flagship Soft Launch", budget: 3500000,
+                            id: 101, title: "Digital Flagship Soft Launch", budget: 0,
                             audience: "Waitlist Subscribers, Early Adopters",
                             kpis: ["Shopify Store Live", "10,000 Early Site Visitors"],
                             actions: [
@@ -476,7 +526,7 @@
                     id: 2, name: "June 2026", active: true,
                     phases: [
                         {
-                            id: 201, title: "Marketplace Preparation", budget: 1850000,
+                            id: 201, title: "Marketplace Preparation", budget: 0,
                             audience: "Broad Urban Commuters, Amazon Shoppers",
                             kpis: ["Setup Amazon A+ Content", "Generate Top 50 keywords list"],
                             actions: [
@@ -491,7 +541,7 @@
                     id: 3, name: "July 2026", active: true,
                     phases: [
                         {
-                            id: 301, title: "Amazon Hard Launch", budget: 2000000,
+                            id: 301, title: "Amazon Hard Launch", budget: 0,
                             audience: "Amazon Shoppers, Prime Members",
                             kpis: ["July 1 Amazon Launch", "First 100 Authentic Reviews"],
                             actions: [
@@ -506,7 +556,7 @@
                     id: 4, name: "August 2026", active: true,
                     phases: [
                         {
-                            id: 401, title: "Shared Journeys UGC", budget: 3500000,
+                            id: 401, title: "Shared Journeys UGC", budget: 0,
                             audience: "Broad Market, Remarketing Pool",
                             kpis: ["15,000 New Followers", "500+ Authentic Reviews"],
                             actions: [
@@ -519,11 +569,11 @@
                 }
             ],
             production: [
-                { id: 1, cat: "Physical Shoot", title: "Campaign Cinema", desc: "3-day shoot capturing narrative 'Transitions' brand films. Focus on emotional storytelling.", date: "May 5-8, 2026", budget: 1500000 },
-                { id: 2, cat: "Physical Shoot", title: "E-Commerce Catalogue", desc: "Studio environment. Macro focus on functional details, YKK zips, and interior capacity.", date: "May 10-11, 2026", budget: 450000 },
-                { id: 3, cat: "Physical Shoot", title: "Lifestyle & UGC Capture", desc: "Raw, unpolished environments for Meta/TikTok ads. Mobile-first framing.", date: "May 12, 2026", budget: 300000 },
-                { id: 4, cat: "Post-Production", title: "Hero Film Edit", desc: "Color grading, sound design (ASMR focus), and master formatting for 16:9 and 9:16.", date: "May 15-25, 2026", budget: 250000 },
-                { id: 5, cat: "Post-Production", title: "Social Ad Cutdowns", desc: "15s, 30s high-hook variations optimized for fast-paced vertical feeds.", date: "May 26-28, 2026", budget: 150000 }
+                { id: 1, cat: "Physical Shoot", title: "Campaign Cinema", desc: "3-day shoot capturing narrative 'Transitions' brand films. Focus on emotional storytelling.", date: "May 5-8, 2026", budget: 0 },
+                { id: 2, cat: "Physical Shoot", title: "E-Commerce Catalogue", desc: "Studio environment. Macro focus on functional details, YKK zips, and interior capacity.", date: "May 10-11, 2026", budget: 0 },
+                { id: 3, cat: "Physical Shoot", title: "Lifestyle & UGC Capture", desc: "Raw, unpolished environments for Meta/TikTok ads. Mobile-first framing.", date: "May 12, 2026", budget: 0 },
+                { id: 4, cat: "Post-Production", title: "Hero Film Edit", desc: "Color grading, sound design (ASMR focus), and master formatting for 16:9 and 9:16.", date: "May 15-25, 2026", budget: 0 },
+                { id: 5, cat: "Post-Production", title: "Social Ad Cutdowns", desc: "15s, 30s high-hook variations optimized for fast-paced vertical feeds.", date: "May 26-28, 2026", budget: 0 }
             ],
             calendar: [
                 { m: "May 2026", d: "May 1", time: "09:00 AM IST", t: "Behind the Scenes", v: "Teaser photo from the first product shoot. Studio lighting, blurry product.", r: "Builds early hype and shows momentum by sharing the physical production process.", c: "Bringing the companion to life. Day 1 on set.", plats: { ...platformDefaults(), instagram: true } },
@@ -538,7 +588,8 @@
         if (autosaved) {
             window.db = migrateData(JSON.parse(autosaved));
         } else {
-            window.db = defaultDb;
+            // Setup fresh deeply-cloned copy
+            window.db = JSON.parse(JSON.stringify(defaultDb));
         }
 
         // --- 3. STATE MANAGEMENT ---
@@ -569,7 +620,7 @@
             navigate('exec');
             
             const dt = document.getElementById('docTitle');
-            if(dt) dt.innerText = window.db.exec.docTitle || "Omnichannel Rollout";
+            if(dt) dt.innerText = window.db.exec.docTitle || "MADE BY KOOTHU";
         };
 
         function renderNav() {
@@ -608,21 +659,22 @@
             let totalDigits = 0;
             let totalProdDigits = 0;
             const phaseList = [];
-            const chartLabels = [];
-            const chartData = [];
             const timelineEvents = [];
 
+            // Gather Roadmap Data
+            const monthBudgets = {};
             window.db.months.filter(m => m.active).forEach(m => {
+                monthBudgets[m.name] = 0;
                 m.phases.forEach(p => {
                     const b = parseInt(p.budget) || 0;
                     totalDigits += b;
+                    monthBudgets[m.name] += b;
                     phaseList.push({ month: m.name, title: p.title, budget: b });
-                    chartLabels.push(p.title);
-                    chartData.push(b);
                     timelineEvents.push({ date: m.name, type: 'Phase', title: p.title });
                 });
             });
 
+            // Gather Production Data
             window.db.production.forEach(p => {
                 const b = parseInt(p.budget) || 0;
                 totalProdDigits += b;
@@ -630,6 +682,11 @@
                 timelineEvents.push({ date: p.date, type: 'Production', title: p.title });
             });
             
+            // Build Month-based Chart Data
+            const chartLabels = [...Object.keys(monthBudgets), 'Media Production'];
+            const chartData = [...Object.values(monthBudgets), totalProdDigits];
+            const isZeroBudget = chartData.reduce((a, b) => a + b, 0) === 0;
+
             const totalLakhs = (totalDigits / 100000).toFixed(2);
             const totalCr = (totalDigits / 10000000).toFixed(2);
 
@@ -640,7 +697,7 @@
                         <span class="text-sm font-primary text-[#fafafa] break-words whitespace-normal leading-relaxed block w-full mt-1">${p.title}</span>
                     </div>
                     <span class="text-sm font-tech font-bold text-[#fafafa] flex items-center gap-1 shrink-0 mt-1 sm:mt-0 whitespace-nowrap">
-                        <span class="text-[#a1a1aa] font-normal text-[10px] mr-1">INR</span> ${formatINR(p.budget)}
+                        <span class="text-[#a1a1aa] font-normal text-[10px] mr-1">INR</span> ${(p.budget/100000).toFixed(2)} Lakhs
                     </span>
                 </div>
             `).join('');
@@ -651,6 +708,9 @@
                     <span class="text-sm font-primary text-[#fafafa] block break-words whitespace-normal leading-relaxed w-full">${e.title}</span>
                 </div>
             `).join('');
+
+            // Unique ID per render to avoid Chart JS context clashes
+            const chartId = 'bChartDonut_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
 
             container.innerHTML = `
                 <div class="fade-in max-w-6xl mx-auto pb-12 w-full">
@@ -665,7 +725,7 @@
 
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8 w-full items-start">
                         <!-- Left Col: Budgets -->
-                        <div class="lg:col-span-5 flex flex-col w-full bg-[#1a1a1c] p-6 md:p-8 rounded-xl border border-[#3f3f46] avoid-break break-inside-avoid">
+                        <div class="lg:col-span-5 flex flex-col w-full bg-[#1a1a1c] p-4 sm:p-6 md:p-8 rounded-xl border border-[#3f3f46] avoid-break break-inside-avoid">
                             <div class="w-full">
                                 <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest mb-2 block">Total Capital Allocation</p>
                                 <p class="text-4xl font-primary font-bold text-[#fafafa] mb-1 block w-full break-words">${totalLakhs} Lakhs</p>
@@ -675,7 +735,7 @@
                             <div class="pt-6 border-t border-[#3f3f46] w-full">
                                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
                                     <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Phase-wise Allocation</p>
-                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Total: ${formatINR(totalDigits - totalProdDigits)}</p>
+                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Total: ${((totalDigits - totalProdDigits)/100000).toFixed(2)} Lakhs</p>
                                 </div>
                                 <div class="flex flex-col w-full">
                                     ${phaseBreakdowns || `<p class="text-sm text-[#5e5e63] italic w-full">No phases scheduled.</p>`}
@@ -685,24 +745,24 @@
                             <div class="pt-6 border-t border-[#3f3f46] mt-4 w-full">
                                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
                                     <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Media Production</p>
-                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Total: ${formatINR(totalProdDigits)}</p>
+                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Total: ${(totalProdDigits/100000).toFixed(2)} Lakhs</p>
                                 </div>
                                 <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed w-full break-words">Includes all physical shoots and post-production editing allocated in the Media Production section.</p>
                             </div>
                         </div>
 
                         <!-- Right Col: Charts & Master Timeline -->
-                        <div class="lg:col-span-7 flex flex-col gap-8 w-full">
+                        <div class="lg:col-span-7 flex flex-col gap-8 w-full min-w-0">
                             
-                            <div class="bg-[#1a1a1c] p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full avoid-break break-inside-avoid">
-                                <h3 class="text-sm font-primary font-bold block mb-4 w-full break-words">Capital Distribution by Phase</h3>
-                                <div class="chart-container w-full">
-                                    <canvas id="bChartDonut"></canvas>
+                            <div class="bg-[#1a1a1c] p-4 sm:p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full avoid-break break-inside-avoid min-w-0">
+                                <h3 class="text-sm font-primary font-bold block mb-4 w-full break-words whitespace-normal text-center sm:text-left">Capital Distribution by Month</h3>
+                                <div class="chart-container w-full min-w-0 relative">
+                                    <canvas id="${chartId}"></canvas>
                                 </div>
                             </div>
 
-                            <div class="bg-[#1a1a1c] p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full avoid-break break-inside-avoid">
-                                <h3 class="text-sm font-primary font-bold block mb-6 w-full break-words">Strategic Timeline</h3>
+                            <div class="bg-[#1a1a1c] p-4 sm:p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full avoid-break break-inside-avoid min-w-0">
+                                <h3 class="text-sm font-primary font-bold block mb-6 w-full break-words whitespace-normal">Strategic Timeline</h3>
                                 <div class="flex flex-col w-full">
                                     ${masterTimelineHtml || `<p class="text-sm text-[#5e5e63] italic w-full">No timeline events generated.</p>`}
                                 </div>
@@ -714,22 +774,40 @@
             `;
             
             if (chartData.length > 0) {
-                const cColors = ['#f15e27', '#fafafa', '#a1a1aa', '#5e5e63', '#fdba74', '#fb923c'];
-                const ctxDonut = document.getElementById('bChartDonut').getContext('2d');
-                chart1Instance = new Chart(ctxDonut, {
+                const cColors = ['#f15e27', '#fafafa', '#a1a1aa', '#5e5e63', '#fdba74', '#fb923c', '#d44c1a', '#3f3f46'];
+                const ctxDonut = document.getElementById(chartId).getContext('2d');
+                
+                const newChart = new Chart(ctxDonut, {
                     type: 'doughnut',
                     data: { 
-                        labels: chartLabels, 
-                        datasets: [{ data: chartData, backgroundColor: cColors, borderColor: '#1a1a1c', borderWidth: 3 }] 
+                        labels: isZeroBudget ? ['No Budget Allocated'] : chartLabels, 
+                        datasets: [{ 
+                            data: isZeroBudget ? [1] : chartData, 
+                            backgroundColor: isZeroBudget ? ['#1a1a1c'] : cColors, 
+                            borderColor: '#3f3f46', 
+                            borderWidth: 1 
+                        }] 
                     },
                     options: { 
                         responsive: true, maintainAspectRatio: false, cutout: '75%', 
                         plugins: { 
-                            legend: { display: true, position: window.innerWidth < 1024 ? 'bottom' : 'right', labels: {color: '#fafafa', padding: 15, font: { family: "'Plus Jakarta Sans', sans-serif" }} },
-                            tooltip: { backgroundColor: '#0f0f10', padding: 12, titleFont: { family: "'Plus Jakarta Sans', sans-serif" }, bodyFont: { family: "'Plus Jakarta Sans', sans-serif" }, callbacks: { label: (ctx) => ` ${(ctx.raw/100000).toFixed(2)} Lakhs` } }
+                            legend: { display: true, position: window.innerWidth < 1024 ? 'bottom' : 'right', labels: {color: '#a1a1aa', padding: 15, font: { family: "'Plus Jakarta Sans', sans-serif" }} },
+                            tooltip: { 
+                                backgroundColor: '#0f0f10', padding: 12, titleFont: { family: "'Plus Jakarta Sans', sans-serif" }, bodyFont: { family: "'Plus Jakarta Sans', sans-serif" }, 
+                                callbacks: { 
+                                    label: (ctx) => {
+                                        if(isZeroBudget) return ' ₹ 0 Lakhs';
+                                        return ` ${(ctx.raw/100000).toFixed(2)} Lakhs`;
+                                    } 
+                                } 
+                            }
                         } 
                     }
                 });
+                
+                if (container.id === 'main-content') {
+                    chart1Instance = newChart;
+                }
             }
         }
 
@@ -834,7 +912,7 @@
                         </div>
                         <div class="bg-[#1a1a1c] border border-[#3f3f46] px-4 py-2 rounded-lg w-full md:w-auto flex items-center gap-3 shrink-0">
                             <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest shrink-0">Capital (INR):</p>
-                            <p class="text-lg font-tech font-bold text-[#fafafa] min-w-[30px] border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateBudget(${mIndex}, ${pIndex}, this)">${p.budget}</p>
+                            <p class="text-lg font-tech font-bold text-[#fafafa] min-w-[30px] border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateBudget(${mIndex}, ${pIndex}, this)">${formatINR(p.budget).replace('₹ ', '')}</p>
                         </div>
                     </div>
                     
@@ -924,7 +1002,7 @@
                         <span class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] block">Allocated Budget</span>
                         <p class="font-tech text-lg text-[#fafafa] flex items-center gap-1">
                             <span class="text-[10px] text-[#a1a1aa] font-normal">INR</span> 
-                            <span class="border border-transparent focus:border-b-[#f15e27] min-w-[30px] text-right" contenteditable="true" onblur="updateProdBudget(${i}, this)">${p.budget}</span>
+                            <span class="border border-transparent focus:border-b-[#f15e27] min-w-[30px] text-right" contenteditable="true" onblur="updateProdBudget(${i}, this)">${formatINR(p.budget).replace('₹ ', '')}</span>
                         </p>
                     </div>
                 </div>
