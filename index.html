@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOMARO: GTM Strategy & Production Dashboard</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --nomaro-orange: #f15e27;
+            --nomaro-black: #0f0f10;
+            --nomaro-surface: #1a1a1c;
+            --nomaro-border: #3f3f46;
+            --nomaro-text: #fafafa;
+            --nomaro-muted: #a1a1aa;
+        }
+
+        html, body {
+            background-color: var(--nomaro-black);
+            color: var(--nomaro-text);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+
+        .font-primary { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-tech { font-family: 'JetBrains Mono', monospace; }
+        .font-editorial { font-family: 'Instrument Serif', serif; }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 250px;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 300px; }
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--nomaro-black); }
+        ::-webkit-scrollbar-thumb { background: #5e5e63; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--nomaro-orange); }
+
+        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .nav-btn {
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        .nav-btn.active {
+            background-color: var(--nomaro-surface);
+            border-left-color: var(--nomaro-orange);
+            color: var(--nomaro-text);
+            font-weight: 700;
+        }
+        
+        .interactive-btn { transition: all 0.2s; }
+        .interactive-btn.active {
+            background-color: var(--nomaro-orange);
+            color: var(--nomaro-text);
+            border-color: var(--nomaro-orange);
+        }
+
+        /* Editable inputs */
+        [contenteditable="true"] {
+            outline: none;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            min-width: 20px;
+            border: 1px solid transparent;
+        }
+        [contenteditable="true"]:hover {
+            background-color: rgba(241, 94, 39, 0.05);
+            border-color: rgba(241, 94, 39, 0.2);
+            cursor: text;
+        }
+        [contenteditable="true"]:focus {
+            background-color: rgba(241, 94, 39, 0.1);
+            border-bottom-color: var(--nomaro-orange);
+            border-radius: 4px 4px 0 0;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .drag-over { border: 2px dashed var(--nomaro-orange) !important; opacity: 0.5; }
+
+        /* Print Styles for PDF Export */
+        @media print {
+            body, main {
+                height: auto !important;
+                overflow: visible !important;
+                background-color: #0f0f10 !important;
+                color: #fafafa !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            nav, .no-print, #addContentModal, #addMonthModal, #loadModal {
+                display: none !important;
+            }
+            .print-section {
+                page-break-before: always;
+                width: 100vw;
+                padding: 2rem 0;
+            }
+            .print-section:first-child {
+                page-break-before: auto;
+            }
+            .fade-in { animation: none !important; opacity: 1 !important; transform: none !important; }
+            .break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <nav class="w-full md:w-72 bg-[#0f0f10] border-b md:border-b-0 md:border-r border-[#3f3f46] flex flex-col shrink-0 z-50">
+        <div class="p-6 md:p-8 border-b border-[#3f3f46] bg-[#0f0f10] relative z-10 shrink-0">
+            <div class="flex items-start cursor-pointer group" onclick="navigate('exec')">
+                <h1 class="text-4xl font-bold tracking-tight leading-none text-[#fafafa] font-primary group-hover:opacity-80 transition-opacity">
+                    nomaro
+                </h1>
+            </div>
+            <p class="text-[10px] font-bold text-[#5e5e63] tracking-widest uppercase mt-4 font-tech">Client Strategy Portal</p>
+        </div>
+        
+        <div class="flex-grow overflow-x-auto md:overflow-y-auto py-2 md:py-4 flex flex-row md:flex-col relative z-10 hide-scrollbar" id="nav-container">
+            <!-- Nav injected via JS -->
+        </div>
+
+        <div class="flex flex-col p-6 md:p-8 border-t border-[#3f3f46] bg-[#0f0f10] shrink-0 gap-3">
+            <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest mb-1">Data & Export</p>
+            <div class="flex gap-2">
+                <button onclick="saveVersion()" class="flex-1 bg-[#1a1a1c] hover:bg-[#3f3f46] border border-[#3f3f46] text-[#fafafa] font-tech text-[10px] uppercase tracking-widest py-2 rounded transition-colors">Save</button>
+                <button onclick="openLoadModal()" class="flex-1 bg-[#1a1a1c] hover:bg-[#3f3f46] border border-[#3f3f46] text-[#fafafa] font-tech text-[10px] uppercase tracking-widest py-2 rounded transition-colors">Load</button>
+            </div>
+            <button onclick="exportPDF()" class="w-full bg-[#f15e27] hover:bg-[#d44c1a] text-white font-tech text-[10px] uppercase tracking-widest py-2.5 rounded transition-colors mt-1 shadow-lg">
+                Export to PDF
+            </button>
+            
+            <div class="flex flex-col gap-1 mt-4 border-t border-[#3f3f46] pt-4 text-xs text-[#5e5e63] font-tech">
+                <span class="text-[#f15e27] font-bold tracking-widest uppercase text-[10px]">Confidential</span>
+                <span contenteditable="true" onblur="updateDB('exec.docTitle', this)">Omnichannel Rollout</span>
+                <span contenteditable="true" onblur="updateDB('exec.docVersion', this)">v8.0.1</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow overflow-y-auto bg-[#0f0f10] p-4 sm:p-8 md:p-12 relative w-full" id="main-content">
+        <!-- Views injected via JS -->
+    </main>
+
+    <!-- Load Version Modal -->
+    <div id="loadModal" class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4 fade-in no-print">
+        <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-xl p-6 md:p-8 max-w-sm w-full text-[#fafafa] relative shadow-2xl">
+            <button onclick="closeLoadModal()" class="absolute top-5 right-5 text-[#5e5e63] hover:text-[#fafafa] hover:bg-[#f15e27] hover:border-[#f15e27] transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-[#0f0f10] border border-[#3f3f46] text-lg leading-none pb-1">&times;</button>
+            <h3 class="text-2xl font-editorial italic mb-2">Load Strategy Version</h3>
+            <p class="text-[10px] font-tech text-[#a1a1aa] mb-6 uppercase tracking-widest border-b border-[#3f3f46] pb-4">Select a saved workspace</p>
+            
+            <div id="loadVersionList" class="flex flex-col gap-2 max-h-[40vh] overflow-y-auto">
+                <!-- Versions injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Month Modal -->
+    <div id="addMonthModal" class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4 fade-in no-print">
+        <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-xl p-6 md:p-8 max-w-sm w-full text-[#fafafa] relative shadow-2xl">
+            <button onclick="closeAddMonthModal()" class="absolute top-5 right-5 text-[#5e5e63] hover:text-[#fafafa] hover:bg-[#f15e27] hover:border-[#f15e27] transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-[#0f0f10] border border-[#3f3f46] text-lg leading-none pb-1">&times;</button>
+            <h3 class="text-2xl font-editorial italic mb-2">Add Timeline Month</h3>
+            <p class="text-[10px] font-tech text-[#a1a1aa] mb-6 uppercase tracking-widest border-b border-[#3f3f46] pb-4">Expand the roadmap</p>
+            
+            <div class="flex flex-col gap-4">
+                <div>
+                    <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Month & Year *</label>
+                    <input type="text" id="newMonthName" placeholder="e.g. November 2026" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
+                </div>
+                <div class="text-red-500 text-xs hidden" id="addMonthError">Month name is required.</div>
+                <button onclick="saveNewMonth()" class="mt-4 bg-[#f15e27] hover:bg-[#d44c1a] text-white font-tech text-[10px] uppercase tracking-widest py-3.5 rounded-md transition-colors">
+                    Add Month
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Content Modal -->
+    <div id="addContentModal" class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4 fade-in no-print">
+        <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-xl p-6 md:p-8 max-w-lg w-full text-[#fafafa] relative shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button onclick="closeAddContentModal()" class="absolute top-5 right-5 text-[#5e5e63] hover:text-[#fafafa] hover:bg-[#f15e27] hover:border-[#f15e27] transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-[#0f0f10] border border-[#3f3f46] text-lg leading-none pb-1">&times;</button>
+            <h3 class="text-2xl font-editorial italic mb-2">Schedule Deliverable</h3>
+            <p class="text-[10px] font-tech text-[#a1a1aa] mb-6 uppercase tracking-widest border-b border-[#3f3f46] pb-4">Add to Daily Calendar</p>
+            
+            <div class="flex flex-col gap-4">
+                <div>
+                    <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Date *</label>
+                    <input type="text" id="newDate" placeholder="e.g. May 12" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
+                </div>
+                <div>
+                    <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Time</label>
+                    <input type="text" id="newTime" placeholder="e.g. 10:00 AM IST" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
+                </div>
+                <div>
+                    <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Content Title / Theme *</label>
+                    <input type="text" id="newTitle" placeholder="e.g. Feature Highlight" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
+                </div>
+                <div>
+                    <label class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest block mb-1">Month Category</label>
+                    <select id="newMonthSelect" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
+                        <!-- Injected dynamically -->
+                    </select>
+                </div>
+                <div class="text-red-500 text-xs hidden" id="addError">Date and Content Title are mandatory.</div>
+                <button onclick="saveNewContent()" class="mt-4 bg-[#f15e27] hover:bg-[#d44c1a] text-white font-tech text-[10px] uppercase tracking-widest py-3.5 rounded-md transition-colors">
+                    Create Content Card
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-[#fafafa] text-[#0f0f10] px-6 py-3 rounded-md shadow-2xl font-tech text-xs tracking-widest uppercase transition-opacity duration-300 opacity-0 pointer-events-none z-[200]">
+        Notification
+    </div>
+
+    <script>
+        // --- 1. UTILITIES & GLOBALLY EDITABLE DATA BINDING ---
+        // Converts strings back to numbers handling formatting properly
+        function parseLakhs(str) {
+            let numStr = str.toString().replace(/[^0-9.-]/g, '');
+            if (!numStr) return 0;
+            return parseFloat(numStr);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.classList.remove('opacity-0');
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+            }, 3000);
+        }
+
+        window.updateDB = function(path, element) {
+            const value = element.innerText.trim();
+            const parts = path.split('.');
+            let obj = window.db;
+            for (let i = 0; i < parts.length - 1; i++) {
+                obj = obj[parts[i]];
+            }
+            obj[parts[parts.length - 1]] = value;
+            autoSave();
+        };
+
+        window.updateBudget = function(mIndex, pIndex, el) {
+            let val = parseFloat(el.innerText);
+            if (isNaN(val)) val = 0;
+            window.db.months[mIndex].phases[pIndex].budget = val.toString();
+            autoSave();
+            navigate(state.view); 
+        };
+
+        window.updateProdBudget = function(i, el) {
+            let val = parseFloat(el.innerText);
+            if (isNaN(val)) val = 0;
+            window.db.production[i].budget = val.toString();
+            autoSave();
+            navigate(state.view);
+        }
+
+        // --- 1B. SAVE / LOAD / EXPORT LOGIC ---
+        function autoSave() {
+            localStorage.setItem('nomaro_autosave', JSON.stringify(window.db));
+        }
+
+        window.saveVersion = function() {
+            const vName = prompt("Enter a name for this strategy version:");
+            if(!vName) return;
+            let versions = JSON.parse(localStorage.getItem('nomaro_versions') || '{}');
+            versions[vName] = window.db;
+            localStorage.setItem('nomaro_versions', JSON.stringify(versions));
+            showToast(`Version '${vName}' saved`);
+        }
+
+        window.openLoadModal = function() {
+            let versions = JSON.parse(localStorage.getItem('nomaro_versions') || '{}');
+            const keys = Object.keys(versions);
+            const list = document.getElementById('loadVersionList');
+            
+            if(keys.length === 0) {
+                list.innerHTML = '<p class="text-sm font-primary text-[#5e5e63] italic">No saved custom versions found.</p>';
+            } else {
+                list.innerHTML = keys.map(k => `
+                    <div class="flex justify-between items-center p-4 bg-[#0f0f10] border border-[#3f3f46] rounded-lg mb-3 last:mb-0">
+                        <span class="text-sm font-primary font-bold text-[#fafafa] break-words whitespace-normal min-w-0 flex-grow pr-4">${k}</span>
+                        <div class="flex gap-3 shrink-0">
+                            <button onclick="loadSpecificVersion('${k}')" class="text-[10px] font-tech uppercase tracking-widest text-[#f15e27] hover:text-[#fafafa] transition-colors">Load</button>
+                            <button onclick="deleteSpecificVersion('${k}')" class="text-[10px] font-tech uppercase tracking-widest text-[#5e5e63] hover:text-red-500 transition-colors">Del</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('loadModal').classList.remove('hidden');
+        }
+
+        window.closeLoadModal = function() {
+            document.getElementById('loadModal').classList.add('hidden');
+        }
+
+        window.loadSpecificVersion = function(k) {
+            let versions = JSON.parse(localStorage.getItem('nomaro_versions') || '{}');
+            if(versions[k]) {
+                window.db = versions[k];
+                autoSave();
+                navigate(state.view);
+                closeLoadModal();
+                showToast(`Loaded version: ${k}`);
+            }
+        }
+
+        window.deleteSpecificVersion = function(k) {
+            let versions = JSON.parse(localStorage.getItem('nomaro_versions') || '{}');
+            delete versions[k];
+            localStorage.setItem('nomaro_versions', JSON.stringify(versions));
+            openLoadModal(); // refresh list
+        }
+
+        window.exportPDF = function() {
+            const main = document.getElementById('main-content');
+            const currentView = state.view;
+            
+            // Prepare DOM for full print by stacking all views
+            main.innerHTML = '';
+            
+            const v1 = document.createElement('div'); v1.className = 'print-section';
+            const v2 = document.createElement('div'); v2.className = 'print-section';
+            const v3 = document.createElement('div'); v3.className = 'print-section';
+            const v4 = document.createElement('div'); v4.className = 'print-section';
+            
+            main.appendChild(v1);
+            main.appendChild(v2);
+            main.appendChild(v3);
+            main.appendChild(v4);
+            
+            renderExec(v1);
+            renderRoadmap(v2);
+            renderProduction(v3);
+            renderContent(v4);
+            
+            showToast('Preparing PDF layout...');
+            
+            // Give charts time to render on canvases before triggering print dialog
+            setTimeout(() => {
+                window.print();
+                navigate(currentView); // Restore SPA state
+            }, 800);
+        }
+
+        // --- 2. DATA STORE ---
+        const platformDefaults = () => ({ facebook: false, instagram: false, tiktok: false, youtube: false, email: false, website: false, offline: false });
+
+        const defaultDb = {
+            exec: {
+                timeline: "May 15 (Shopify) → July 1 (Amazon)",
+                summary: "This dashboard outlines the Go-To-Market strategy, balancing aesthetic appeal with highly engineered product delivery. Use the breakdown below to review or modify capital allocations instantly.",
+                docTitle: "Omnichannel Rollout",
+                docVersion: "v8.0.0"
+            },
+            months: [
+                {
+                    id: 1, name: "May 2026", active: true,
+                    phases: [
+                        {
+                            id: 101, title: "Digital Flagship Soft Launch", budget: "35",
+                            audience: "Waitlist Subscribers, Early Adopters",
+                            kpis: ["Shopify Store Live", "10,000 Early Site Visitors"],
+                            actions: [
+                                { tag: "Shopify", text: "Store design finalized. Password drops to community, triggering the D2C flagship launch in mid-May." },
+                                { tag: "Social", text: "Launch IG & TikTok. Tease the Shopify drop and deploy the first emotional campaign visuals to build the base audience." }
+                            ],
+                            deliv: ["Live Shopify Store (May)", "Welcome Email Sequence"]
+                        }
+                    ]
+                },
+                {
+                    id: 2, name: "June 2026", active: true,
+                    phases: [
+                        {
+                            id: 201, title: "Marketplace Preparation", budget: "18.5",
+                            audience: "Broad Urban Commuters, Amazon Shoppers",
+                            kpis: ["Setup Amazon A+ Content", "Generate Top 50 keywords list"],
+                            actions: [
+                                { tag: "Amazon", text: "Prepare controlled sales logistics. Focus on gathering early reviewers." },
+                                { tag: "Ads", text: "Deploy remarketing ad set driving traffic selectively to Shopify." }
+                            ],
+                            deliv: ["Amazon A+ Content Deck", "Influencer Seed Kits"]
+                        }
+                    ]
+                },
+                {
+                    id: 3, name: "July 2026", active: true,
+                    phases: [
+                        {
+                            id: 301, title: "Amazon Hard Launch", budget: "20",
+                            audience: "Amazon Shoppers, Prime Members",
+                            kpis: ["July 1 Amazon Launch", "First 100 Authentic Reviews"],
+                            actions: [
+                                { tag: "Amazon", text: "Initiate controlled sales on July 1. Establish organic ranking." },
+                                { tag: "Social", text: "Maintain momentum with product-in-the-wild features." }
+                            ],
+                            deliv: ["Live Amazon Listing (July 1)", "Performance Ad Deployment"]
+                        }
+                    ]
+                },
+                {
+                    id: 4, name: "August 2026", active: true,
+                    phases: [
+                        {
+                            id: 401, title: "Shared Journeys UGC", budget: "35",
+                            audience: "Broad Market, Remarketing Pool",
+                            kpis: ["15,000 New Followers", "500+ Authentic Reviews"],
+                            actions: [
+                                { tag: "Social", text: "Launch UGC initiative: 'What are you carrying tomorrow?'." },
+                                { tag: "Amazon", text: "Scale profitable PPC campaigns. Monitor Buy Box." }
+                            ],
+                            deliv: ["UGC Ad Creatives", "Amazon Vine Reviews", "Email Journey Workflows"]
+                        }
+                    ]
+                }
+            ],
+            production: [
+                { id: 1, cat: "Physical Shoot", title: "Campaign Cinema", desc: "3-day shoot capturing narrative 'Transitions' brand films. Focus on emotional storytelling.", date: "May 5-8, 2026", budget: "15" },
+                { id: 2, cat: "Physical Shoot", title: "E-Commerce Catalogue", desc: "Studio environment. Macro focus on functional details, YKK zips, and interior capacity.", date: "May 10-11, 2026", budget: "4.5" },
+                { id: 3, cat: "Physical Shoot", title: "Lifestyle & UGC Capture", desc: "Raw, unpolished environments for Meta/TikTok ads. Mobile-first framing.", date: "May 12, 2026", budget: "3" },
+                { id: 4, cat: "Post-Production", title: "Hero Film Edit", desc: "Color grading, sound design (ASMR focus), and master formatting for 16:9 and 9:16.", date: "May 15-25, 2026", budget: "2.5" },
+                { id: 5, cat: "Post-Production", title: "Social Ad Cutdowns", desc: "15s, 30s high-hook variations optimized for fast-paced vertical feeds.", date: "May 26-28, 2026", budget: "1.5" }
+            ],
+            calendar: [
+                { m: "May 2026", d: "May 1", time: "09:00 AM IST", t: "Behind the Scenes", v: "Teaser photo from the first product shoot. Studio lighting, blurry product.", r: "Builds early hype and shows momentum by sharing the physical production process.", c: "Bringing the companion to life. Day 1 on set.", plats: { ...platformDefaults(), instagram: true } },
+                { m: "May 2026", d: "May 10", time: "10:30 AM IST", t: "The Digital Flagship", v: "Dark-mode screenshot of the upcoming Shopify site interface.", r: "Prepares the waitlist for the upcoming Shopify drop. Builds D2C anticipation.", c: "Our digital home is almost ready. Keep an eye on your inbox.", plats: { ...platformDefaults(), email: true, website: true } },
+                { m: "June 2026", d: "June 6", time: "06:00 PM IST", t: "ASMR Packing", v: "Crisp sounds of a laptop, tech pouch, and notebook sliding seamlessly into unseen sleeves.", r: "Demonstrates utility and capacity in a highly satisfying, shareable format.", c: "A place for everything. #ASMR", plats: { ...platformDefaults(), tiktok: true, youtube: true } },
+                { m: "July 2026", d: "July 1", time: "09:00 AM IST", t: "Amazon Launch", v: "Hero product shot, fully lit, bright and aspirational. 'NOW ON AMAZON'.", r: "Clear, direct call to action to capture existing marketplace intent.", c: "The Silent Companion is here. Shop the drop on Amazon now.", plats: { ...platformDefaults(), facebook: true, instagram: true, website: true } },
+                { m: "August 2026", d: "Aug 2", time: "11:00 AM IST", t: "Site Tour", v: "Carousel showing different sections of the website, including 'The Journal'.", r: "Pushes Amazon buyers back to the D2C platform to build owned relationships.", c: "More than a store. A place for shared journeys. Explore nomaro.in.", plats: { ...platformDefaults(), instagram: true, email: true } }
+            ]
+        };
+
+        const autosaved = localStorage.getItem('nomaro_autosave');
+        if (autosaved) {
+            window.db = JSON.parse(autosaved);
+        } else {
+            window.db = defaultDb;
+        }
+
+        // --- 3. STATE MANAGEMENT ---
+        const state = {
+            view: 'exec',
+            monthFilter: 'All'
+        };
+
+        function getDefaultMonthId() {
+            const activeM = window.db.months.find(m => m.active);
+            return activeM ? activeM.id : (window.db.months[0] ? window.db.months[0].id : null);
+        }
+
+        let chart1Instance = null;
+        let draggedItemIndex = null;
+
+        const navConfig = [
+            { id: 'exec', label: 'Project Overview' },
+            { id: 'roadmap', label: 'Strategic Roadmap' },
+            { id: 'production', label: 'Media Production' },
+            { id: 'content', label: 'Deliverables Calendar' }
+        ];
+
+        // --- 4. CORE LOGIC & RENDERING ---
+        window.onload = () => {
+            if(!state.monthId) state.monthId = getDefaultMonthId();
+            renderNav();
+            navigate('exec');
+        };
+
+        function renderNav() {
+            const container = document.getElementById('nav-container');
+            container.innerHTML = '';
+            navConfig.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = `nav-btn shrink-0 w-auto md:w-full text-left px-5 md:px-8 py-4 text-sm font-primary whitespace-nowrap transition-colors hover:bg-[#1a1a1c] ${state.view === item.id ? 'active' : 'text-[#a1a1aa]'}`;
+                btn.innerHTML = `<span>${item.label}</span>`;
+                btn.onclick = () => navigate(item.id);
+                container.appendChild(btn);
+            });
+        }
+
+        function navigate(viewId) {
+            state.view = viewId;
+            renderNav();
+            const main = document.getElementById('main-content');
+            main.innerHTML = '';
+            
+            if (chart1Instance) { chart1Instance.destroy(); chart1Instance = null; }
+            
+            switch(viewId) {
+                case 'exec': renderExec(main); break;
+                case 'roadmap': renderRoadmap(main); break;
+                case 'production': renderProduction(main); break;
+                case 'content': renderContent(main); break;
+            }
+            if(!main.closest('.print-section')) {
+                main.scrollTop = 0;
+            }
+        }
+
+        // View 1: Project Overview (Read-Only Face)
+        function renderExec(container) {
+            let totalLakhs = 0;
+            let totalProdLakhs = 0;
+            const phaseList = [];
+            const chartLabels = [];
+            const chartData = [];
+            const timelineEvents = [];
+
+            // Gather Roadmap Data
+            window.db.months.filter(m => m.active).forEach(m => {
+                m.phases.forEach(p => {
+                    const b = parseLakhs(p.budget);
+                    totalLakhs += b;
+                    phaseList.push({ month: m.name, title: p.title, budget: b });
+                    chartLabels.push(p.title);
+                    chartData.push(b);
+                    timelineEvents.push({ date: m.name, type: 'Phase', title: p.title });
+                });
+            });
+
+            // Gather Production Data
+            window.db.production.forEach(p => {
+                const b = parseLakhs(p.budget);
+                totalProdLakhs += b;
+                totalLakhs += b;
+                timelineEvents.push({ date: p.date, type: 'Production', title: p.title });
+            });
+            
+            const totalCr = (totalLakhs / 100).toFixed(2);
+
+            const phaseBreakdowns = phaseList.map((p) => `
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 border-b border-[#3f3f46] last:border-0 gap-2 sm:gap-4 w-full">
+                    <div class="flex flex-col min-w-0 flex-grow w-full">
+                        <span class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest break-words whitespace-normal block w-full">${p.month}</span>
+                        <span class="text-sm font-primary text-[#fafafa] break-words whitespace-normal leading-relaxed block w-full mt-1">${p.title}</span>
+                    </div>
+                    <span class="text-sm font-tech font-bold text-[#fafafa] flex items-center gap-1 shrink-0 mt-1 sm:mt-0 whitespace-nowrap">
+                        <span class="text-[#a1a1aa] font-normal text-[10px] mr-1">INR</span> ${p.budget} L
+                    </span>
+                </div>
+            `).join('');
+
+            // Master Timeline
+            const masterTimelineHtml = timelineEvents.map(e => `
+                <div class="border-l-2 ${e.type === 'Phase' ? 'border-[#f15e27]' : 'border-[#5e5e63]'} pl-4 py-3 mb-4 last:mb-0 w-full">
+                    <span class="text-[10px] font-tech uppercase tracking-widest ${e.type === 'Phase' ? 'text-[#f15e27]' : 'text-[#5e5e63]'} block mb-2 break-words">${e.date} &bull; ${e.type}</span>
+                    <span class="text-sm font-primary text-[#fafafa] block break-words whitespace-normal leading-relaxed w-full">${e.title}</span>
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="fade-in max-w-6xl mx-auto pb-12 w-full">
+                    <div class="mb-10 w-full">
+                        <h2 class="text-5xl md:text-7xl font-editorial italic mb-6 text-[#fafafa] tracking-tight block w-full break-words whitespace-normal">Project Overview</h2>
+                        <div class="py-2 w-full">
+                            <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-words whitespace-normal" contenteditable="true" onblur="updateDB('exec.summary', this)">
+                                ${window.db.exec.summary}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8 w-full items-start">
+                        <!-- Left Col: Budgets -->
+                        <div class="lg:col-span-5 flex flex-col w-full bg-[#1a1a1c] p-6 md:p-8 rounded-xl border border-[#3f3f46]">
+                            <div class="w-full">
+                                <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest mb-2 block">Total Capital Allocation</p>
+                                <p class="text-4xl font-primary font-bold text-[#fafafa] mb-1 block w-full break-words">${totalLakhs} Lakhs</p>
+                                <p class="text-sm font-tech text-[#a1a1aa] mb-6">≈ ${totalCr} Cr INR</p>
+                            </div>
+                            
+                            <div class="pt-6 border-t border-[#3f3f46] w-full">
+                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
+                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Phase-wise Allocation</p>
+                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Total: ${totalLakhs - totalProdLakhs} L</p>
+                                </div>
+                                <div class="flex flex-col w-full">
+                                    ${phaseBreakdowns || `<p class="text-sm text-[#5e5e63] italic w-full">No phases scheduled.</p>`}
+                                </div>
+                            </div>
+                            
+                            <div class="pt-6 border-t border-[#3f3f46] mt-4 w-full">
+                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
+                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Media Production</p>
+                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Total: ${totalProdLakhs} L</p>
+                                </div>
+                                <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed w-full break-words">Includes all physical shoots and post-production editing allocated in the Media Production section.</p>
+                            </div>
+                        </div>
+
+                        <!-- Right Col: Charts & Master Timeline -->
+                        <div class="lg:col-span-7 flex flex-col gap-8 w-full">
+                            
+                            <div class="bg-[#1a1a1c] p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full">
+                                <h3 class="text-sm font-primary font-bold block mb-4 w-full break-words">Capital Distribution by Phase</h3>
+                                <div class="chart-container w-full">
+                                    <canvas id="bChartDonut"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="bg-[#1a1a1c] p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full">
+                                <h3 class="text-sm font-primary font-bold block mb-6 w-full break-words">Strategic Timeline</h3>
+                                <div class="flex flex-col w-full">
+                                    ${masterTimelineHtml || `<p class="text-sm text-[#5e5e63] italic w-full">No timeline events generated.</p>`}
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if (chartData.length > 0) {
+                const ctxDonut = document.getElementById('bChartDonut').getContext('2d');
+                chart1Instance = new Chart(ctxDonut, {
+                    type: 'doughnut',
+                    data: { 
+                        labels: chartLabels, 
+                        datasets: [{ data: chartData, backgroundColor: ['#f15e27', '#fafafa', '#a1a1aa', '#5e5e63', '#fdba74', '#fb923c'], borderColor: '#1a1a1c', borderWidth: 2 }] 
+                    },
+                    options: { 
+                        responsive: true, maintainAspectRatio: false, cutout: '70%', 
+                        plugins: { 
+                            legend: { display: true, position: window.innerWidth < 1024 ? 'bottom' : 'right', labels: {color: '#a1a1aa', padding: 15, font: { family: "'Plus Jakarta Sans', sans-serif" }} },
+                            tooltip: { backgroundColor: '#0f0f10', padding: 12, titleFont: { family: "'Plus Jakarta Sans', sans-serif" }, bodyFont: { family: "'Plus Jakarta Sans', sans-serif" }, callbacks: { label: (ctx) => ` ${ctx.raw} Lakhs` } }
+                        } 
+                    }
+                });
+            }
+        }
+
+        // View 2: Strategic Roadmap
+        window.toggleMonth = function(mId) {
+            const m = window.db.months.find(x => x.id === mId);
+            if(m) m.active = !m.active;
+            
+            const activeMonths = window.db.months.filter(x => x.active);
+            if(activeMonths.length > 0 && !activeMonths.find(x => x.id === state.monthId)) {
+                state.monthId = activeMonths[0].id;
+            }
+            autoSave();
+            navigate(state.view);
+        }
+
+        window.openAddMonthModal = function() {
+            document.getElementById('newMonthName').value = '';
+            document.getElementById('addMonthError').classList.add('hidden');
+            document.getElementById('addMonthModal').classList.remove('hidden');
+        };
+
+        window.closeAddMonthModal = function() {
+            document.getElementById('addMonthModal').classList.add('hidden');
+        };
+
+        window.saveNewMonth = function() {
+            const monthName = document.getElementById('newMonthName').value.trim();
+            if(!monthName) {
+                document.getElementById('addMonthError').classList.remove('hidden');
+                return;
+            }
+
+            const newId = Date.now();
+            window.db.months.push({
+                id: newId,
+                name: monthName,
+                active: true,
+                phases: []
+            });
+
+            state.monthId = newId;
+            closeAddMonthModal();
+            autoSave();
+            navigate(state.view);
+        };
+
+        window.addPhase = function(mIndex) {
+            const newId = Date.now();
+            window.db.months[mIndex].phases.push({
+                id: newId, title: "New Phase", budget: "0",
+                audience: "Define Audience", kpis: ["New KPI"],
+                actions: [],
+                deliv: ["New Deliverable"]
+            });
+            autoSave();
+            navigate(state.view);
+        }
+
+        window.deletePhase = function(mIndex, pIndex) {
+            window.db.months[mIndex].phases.splice(pIndex, 1);
+            autoSave();
+            navigate(state.view);
+        }
+
+        function renderRoadmap(container) {
+            if(!state.monthId && window.db.months.length > 0) state.monthId = getDefaultMonthId();
+            const mIndex = window.db.months.findIndex(x => x.id === state.monthId);
+            const activeMonth = window.db.months[mIndex];
+            
+            // Month Toggles
+            const monthToggles = window.db.months.map(m => `
+                <button onclick="window.toggleMonth(${m.id})" class="px-4 py-2 text-[10px] font-tech uppercase tracking-widest border rounded-full transition-colors ${m.active ? 'bg-[#f15e27] border-[#f15e27] text-[#fafafa]' : 'bg-[#0f0f10] border-[#3f3f46] text-[#5e5e63] hover:border-[#a1a1aa]'}">
+                    ${m.name} ${m.active ? '✓' : ''}
+                </button>
+            `).join('');
+
+            // Active Month Tabs
+            const tabs = window.db.months.filter(m => m.active).map((m, i) => `
+                <button onclick="window.updateP(${m.id})" class="interactive-btn flex-1 p-3 rounded-lg border border-[#3f3f46] text-center text-sm font-primary font-bold transition-all ${state.monthId === m.id ? 'active shadow-lg' : 'bg-[#1a1a1c] text-[#a1a1aa] hover:border-[#f15e27]'}">
+                    <span class="block font-primary text-sm break-words whitespace-normal leading-relaxed" contenteditable="true" onblur="updateDB('months.${window.db.months.indexOf(m)}.name', this)">${m.name}</span>
+                </button>
+            `).join('');
+
+            const phasesHtml = activeMonth && activeMonth.active ? activeMonth.phases.map((p, pIndex) => {
+                const kpis = p.kpis.map((k, i) => `
+                    <li class="flex items-start gap-3 w-full group/item">
+                        <span class="text-[#f15e27] font-tech mt-0.5 shrink-0">-</span>
+                        <span contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.kpis.${i}', this)" class="flex-grow block w-full break-words whitespace-normal min-w-0 text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27]">${k}</span>
+                    </li>
+                `).join('');
+                
+                const dels = p.deliv.map((d, i) => `<span class="inline-block border border-[#3f3f46] text-xs font-primary px-3 py-1.5 rounded-full m-1 border border-transparent focus:border-[#f15e27] min-w-0 break-words whitespace-normal" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.deliv.${i}', this)">${d}</span>`).join('');
+
+                return `
+                <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-2xl overflow-hidden fade-in relative w-full shadow-sm mb-12 last:mb-0 break-inside-avoid">
+                    
+                    <div class="p-6 md:p-8 border-b border-[#3f3f46] flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pr-16 bg-[#0f0f10]">
+                        <button onclick="window.deletePhase(${mIndex}, ${pIndex})" class="absolute top-6 right-6 text-[#5e5e63] hover:text-red-500 transition-colors text-xl font-bold leading-none w-8 h-8 rounded-full flex justify-center items-center pb-1 z-10 no-print" title="Delete Phase">&times;</button>
+                        <div class="w-full md:w-auto flex-grow min-w-0">
+                            <h3 class="text-2xl font-primary font-bold text-[#fafafa] block w-full break-words whitespace-normal min-w-0 border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.title', this)">${p.title}</h3>
+                        </div>
+                        <div class="bg-[#1a1a1c] border border-[#3f3f46] px-4 py-2 rounded-lg w-full md:w-auto flex items-center gap-3 shrink-0">
+                            <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest shrink-0">Capital (Lakhs INR):</p>
+                            <p class="text-lg font-tech font-bold text-[#fafafa] min-w-[30px] border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateBudget(${mIndex}, ${pIndex}, this)">${p.budget}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-10 w-full">
+                        <div class="w-full min-w-0">
+                            <h4 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mb-3">Target Audience</h4>
+                            <p class="text-sm font-primary text-[#fafafa] block w-full break-words whitespace-normal min-w-0 leading-relaxed border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.audience', this)">${p.audience}</p>
+                        </div>
+                        <div class="w-full min-w-0">
+                            <h4 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mb-3">Key Metrics (KPIs)</h4>
+                            <ul class="space-y-3 w-full min-w-0">${kpis}</ul>
+                        </div>
+                    </div>
+                    
+                    <div class="p-6 md:p-8 border-t border-[#3f3f46] w-full min-w-0 bg-[#0f0f10]">
+                        <h4 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mb-4">Required Deliverables</h4>
+                        <div class="-m-1 flex flex-wrap w-full min-w-0">${dels}</div>
+                    </div>
+                </div>
+                `;
+            }).join('') : `<p class="text-[#a1a1aa] text-sm text-center py-10 bg-[#1a1a1c] rounded-xl border border-[#3f3f46]">No active phases for this timeline. Enable a month or add a phase.</p>`;
+
+            container.innerHTML = `
+                <div class="fade-in max-w-5xl mx-auto pb-12 w-full">
+                    <div class="mb-8 w-full">
+                        <h2 class="text-4xl font-editorial italic mb-4 text-[#fafafa] block w-full break-words whitespace-normal" contenteditable="true">Strategic Roadmap</h2>
+                        <div class="py-2 w-full mb-6">
+                            <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-words whitespace-normal min-w-0" contenteditable="true">
+                                Explore and edit the chronological deployment. Enable timeline months below, or add entirely new months to the schedule. Select a month tab to view its associated phases.
+                            </p>
+                        </div>
+                        
+                        <div class="bg-[#1a1a1c] border border-[#3f3f46] p-4 rounded-xl flex flex-wrap items-center gap-3 w-full no-print">
+                            <span class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mr-2">Timeline Settings:</span>
+                            ${monthToggles}
+                            <button onclick="window.openAddMonthModal()" class="px-4 py-2 text-[10px] font-tech uppercase tracking-widest border border-dashed border-[#5e5e63] text-[#a1a1aa] rounded-full hover:border-[#fafafa] hover:text-[#fafafa] transition-colors ml-auto">
+                                + Add Month
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row gap-3 mb-8 w-full flex-wrap no-print">${tabs}</div>
+                    
+                    ${activeMonth && activeMonth.active ? `
+                    <div class="w-full mb-6 flex justify-end no-print">
+                        <button onclick="window.addPhase(${mIndex})" class="bg-[#fafafa] text-[#0f0f10] hover:bg-[#d1d5db] font-tech text-[10px] uppercase tracking-widest px-6 py-3 rounded-full transition-colors whitespace-nowrap shadow-lg">
+                            + Add Phase to ${activeMonth.name}
+                        </button>
+                    </div>` : ''}
+
+                    ${phasesHtml}
+                </div>
+            `;
+        }
+
+        window.updateP = (id) => { state.monthId = id; navigate(state.view); };
+
+        // View 3: Media Production
+        window.addProdProject = function() {
+            window.db.production.push({ id: Date.now(), cat: "New Category", title: "New Project", desc: "Add details here.", date: "TBD", budget: "0" });
+            autoSave();
+            navigate(state.view);
+        }
+
+        window.deleteProdProject = function(index) {
+            window.db.production.splice(index, 1);
+            autoSave();
+            navigate(state.view);
+        }
+
+        function renderProduction(container) {
+            const projectsHtml = window.db.production.map((p, i) => `
+                <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-xl p-6 md:p-8 hover:border-[#f15e27] transition-colors flex flex-col h-full w-full min-w-0 relative group break-inside-avoid">
+                    <button onclick="window.deleteProdProject(${i})" class="absolute top-4 right-4 text-[#5e5e63] hover:text-red-500 md:opacity-0 group-hover:opacity-100 transition-opacity text-xl font-bold leading-none w-8 h-8 rounded-full flex justify-center items-center pb-1 z-10 no-print">&times;</button>
+                    
+                    <span class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-2 border border-transparent focus:border-b-[#f15e27] w-fit" contenteditable="true" onblur="updateDB('production.${i}.cat', this)">${p.cat}</span>
+                    <h4 class="font-editorial italic text-3xl text-[#fafafa] mb-4 block w-full break-words whitespace-normal min-w-0 pr-6 border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('production.${i}.title', this)">${p.title}</h4>
+                    
+                    <div class="flex items-center gap-2 mb-4 w-fit flex-wrap">
+                        <span class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest">Timeline:</span>
+                        <span class="font-tech text-[10px] text-[#fafafa] border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('production.${i}.date', this)">${p.date}</span>
+                    </div>
+
+                    <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed flex-grow block w-full break-words whitespace-normal min-w-0 mb-6 border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('production.${i}.desc', this)">${p.desc}</p>
+                    
+                    <div class="pt-5 border-t border-[#3f3f46] mt-auto w-full min-w-0 flex justify-between items-center">
+                        <span class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] block">Allocated Budget</span>
+                        <p class="font-tech text-lg text-[#fafafa] flex items-center gap-1">
+                            <span class="text-[10px] text-[#a1a1aa] font-normal">INR Lakhs</span> 
+                            <span class="border border-transparent focus:border-b-[#f15e27] min-w-[30px] text-right" contenteditable="true" onblur="updateProdBudget(${i}, this)">${p.budget}</span>
+                        </p>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="fade-in max-w-7xl mx-auto pb-12 w-full">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 w-full gap-6">
+                        <div class="w-full md:w-2/3">
+                            <h2 class="text-4xl font-editorial italic mb-4 text-[#fafafa] block w-full break-words whitespace-normal" contenteditable="true">Media Production</h2>
+                            <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-words whitespace-normal min-w-0" contenteditable="true">
+                                This section manages the specific parameters for physical shoots, content capture, and post-production required to generate the omnichannel visual assets.
+                            </p>
+                        </div>
+                        <button onclick="window.addProdProject()" class="bg-[#fafafa] text-[#0f0f10] hover:bg-[#d1d5db] font-tech text-[10px] uppercase tracking-widest px-6 py-3 rounded-full transition-colors whitespace-nowrap shadow-lg no-print">
+                            + Add Project
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 w-full">
+                        ${projectsHtml || `<p class="text-sm text-[#5e5e63] italic w-full col-span-full">No production projects defined.</p>`}
+                    </div>
+                </div>
+            `;
+        }
+
+        // View 4: Deliverables Calendar
+        window.openAddContentModal = function() {
+            document.getElementById('newDate').value = '';
+            document.getElementById('newTitle').value = '';
+            
+            const select = document.getElementById('newMonthSelect');
+            select.innerHTML = window.db.months.filter(m => m.active).map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+
+            document.getElementById('addError').classList.add('hidden');
+            document.getElementById('addContentModal').classList.remove('hidden');
+        };
+
+        window.closeAddContentModal = function() {
+            document.getElementById('addContentModal').classList.add('hidden');
+        };
+
+        window.saveNewContent = function() {
+            const date = document.getElementById('newDate').value.trim();
+            const time = document.getElementById('newTime').value.trim() || "TBD";
+            const title = document.getElementById('newTitle').value.trim();
+            const month = document.getElementById('newMonthSelect').value;
+
+            if(!date || !title) {
+                document.getElementById('addError').classList.remove('hidden');
+                return;
+            }
+
+            window.db.calendar.push({
+                m: month, d: date, time: time, t: title,
+                v: "Add visual directive here...", r: "Add strategic rationale here...", c: "Draft copy here...",
+                plats: platformDefaults()
+            });
+
+            autoSave();
+            closeAddContentModal();
+            navigate(state.view);
+        };
+
+        window.deleteContent = function(index) {
+            window.db.calendar.splice(index, 1);
+            autoSave();
+            navigate(state.view);
+        };
+
+        window.togglePlatform = function(itemIndex, plat) {
+            window.db.calendar[itemIndex].plats[plat] = !window.db.calendar[itemIndex].plats[plat];
+            autoSave();
+            navigate(state.view);
+        };
+
+        window.dragStart = function(e, index) {
+            draggedItemIndex = index;
+            e.dataTransfer.effectAllowed = "move";
+        };
+
+        window.dragOver = function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+            e.currentTarget.classList.add('drag-over');
+        };
+
+        window.dragLeave = function(e) {
+            e.currentTarget.classList.remove('drag-over');
+        };
+
+        window.drop = function(e, dropIndex) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            if(draggedItemIndex === null || draggedItemIndex === dropIndex) return;
+
+            const item = window.db.calendar.splice(draggedItemIndex, 1)[0];
+            window.db.calendar.splice(dropIndex, 0, item);
+            draggedItemIndex = null;
+            autoSave();
+            navigate(state.view);
+        };
+
+        const platformKeys = ['facebook', 'instagram', 'tiktok', 'youtube', 'email', 'website', 'offline'];
+        const platformLabels = { facebook: 'Facebook', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', email: 'Email', website: 'Website', offline: 'Offline' };
+
+        function renderContent(container) {
+            const uM = ['All', ...new Set(window.db.months.filter(m => m.active).map(m => m.name))];
+
+            const mBtns = uM.map(m => `
+                <button onclick="window.updateF('m', '${m}')" class="interactive-btn px-4 py-2.5 rounded-full font-tech text-[10px] uppercase tracking-widest border transition-colors shadow-sm ${state.monthFilter === m ? 'active' : 'bg-[#1a1a1c] text-[#a1a1aa] border-[#3f3f46] hover:border-[#f15e27]'}">${m}</button>
+            `).join('');
+
+            const fd = window.db.calendar.map((item, originalIndex) => ({ ...item, originalIndex })).filter(i => {
+                return state.monthFilter === 'All' || i.m === state.monthFilter;
+            });
+
+            let gh = fd.map((i) => {
+                const pBadges = platformKeys.map(pk => {
+                    const active = i.plats[pk];
+                    return `<button onclick="togglePlatform(${i.originalIndex}, '${pk}')" class="text-[9px] font-tech uppercase tracking-widest px-3 py-1.5 rounded transition-colors border ${active ? 'bg-[#f15e27] text-white border-[#f15e27] shadow-md' : 'bg-[#0f0f10] text-[#5e5e63] border-[#3f3f46] hover:border-[#a1a1aa] hover:text-[#fafafa]'}">${platformLabels[pk]}</button>`;
+                }).join('');
+
+                return `
+                <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-xl p-6 md:p-8 flex flex-col hover:border-[#f15e27] transition-colors relative group break-inside-avoid shadow-sm w-full min-w-0"
+                     draggable="true" 
+                     ondragstart="dragStart(event, ${i.originalIndex})" 
+                     ondragover="dragOver(event)" 
+                     ondragleave="dragLeave(event)"
+                     ondrop="drop(event, ${i.originalIndex})">
+                    
+                    <button onclick="deleteContent(${i.originalIndex})" class="absolute top-4 right-4 text-[#5e5e63] hover:text-red-500 md:opacity-0 group-hover:opacity-100 transition-opacity text-xl bg-[#0f0f10] rounded-full w-8 h-8 flex items-center justify-center border border-[#3f3f46] pb-1 no-print">&times;</button>
+                    
+                    <div class="flex flex-col gap-4 mb-6 border-b border-[#3f3f46] pb-6 w-full min-w-0">
+                        <div class="flex flex-col w-full pr-6 min-w-0">
+                            <div class="flex flex-row items-center gap-2 mb-4 w-full flex-wrap min-w-0">
+                                <span class="font-tech text-[10px] text-[#fafafa] bg-[#0f0f10] border border-[#3f3f46] px-3 py-1.5 rounded whitespace-nowrap min-w-[30px]" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.d', this)">${i.d}</span> 
+                                <span class="text-[#f15e27] font-tech text-[10px]">&bull;</span> 
+                                <span class="font-tech text-[10px] text-[#a1a1aa] bg-[#0f0f10] border border-[#3f3f46] px-3 py-1.5 rounded whitespace-nowrap min-w-[30px]" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.time', this)">${i.time}</span>
+                            </div>
+                            <h4 class="font-editorial italic text-3xl text-[#fafafa] block w-full break-words whitespace-normal border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.t', this)">${i.t}</h4>
+                        </div>
+                        
+                        <div class="flex flex-wrap gap-2 mt-2 w-full">
+                            ${pBadges}
+                        </div>
+                    </div>
+                    
+                    <div class="flex-grow flex flex-col gap-5 mb-6 w-full min-w-0">
+                        <div class="w-full min-w-0">
+                            <span class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-2" contenteditable="true">Visual Directive</span>
+                            <p class="font-primary text-sm text-[#a1a1aa] leading-relaxed block w-full break-words whitespace-normal border border-transparent focus:border-b-[#f15e27] min-w-0" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.v', this)">${i.v}</p>
+                        </div>
+                        <div class="w-full mt-2 min-w-0">
+                            <span class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest block mb-2" contenteditable="true">Strategic Purpose</span>
+                            <p class="font-primary text-sm text-[#a1a1aa] leading-relaxed focus-within:outline-none block w-full break-words whitespace-normal border border-transparent focus:border-b-[#f15e27] min-w-0" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.r', this)">${i.r}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full mt-auto border-t border-[#3f3f46] pt-6 min-w-0">
+                        <span class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-2" contenteditable="true">Proposed Copy</span>
+                        <p class="font-primary text-sm leading-relaxed text-[#fafafa] focus-within:outline-none block w-full break-words whitespace-normal border border-transparent focus:border-b-[#f15e27] pl-1 min-w-0" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.c', this)">"${i.c}"</p>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            if(fd.length === 0) gh = `<div class="col-span-full text-center py-16 text-[#a1a1aa] bg-[#1a1a1c] rounded-xl border border-[#3f3f46] text-sm font-primary w-full">No deliverables scheduled for this timeframe.</div>`;
+
+            container.innerHTML = `
+                <div class="fade-in max-w-7xl mx-auto pb-12 w-full">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6 w-full">
+                        <div class="w-full md:w-2/3">
+                            <h2 class="text-4xl font-editorial italic mb-4 text-[#fafafa] block w-full break-words whitespace-normal" contenteditable="true">Deliverables Calendar</h2>
+                            <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-words whitespace-normal py-2" contenteditable="true">
+                                Review and manipulate the daily content cadence. You can click to edit any text block securely, toggle active platforms using the tags, and drag-and-drop cards to reorder the schedule globally. 
+                            </p>
+                        </div>
+                        <button onclick="openAddContentModal()" class="bg-[#fafafa] text-[#0f0f10] hover:bg-[#d1d5db] font-tech text-[10px] uppercase tracking-widest px-6 py-3.5 rounded-full transition-colors whitespace-nowrap shrink-0 shadow-lg border border-transparent focus:outline-none no-print">
+                            + Add Deliverable
+                        </button>
+                    </div>
+                    
+                    <div class="flex flex-wrap items-center gap-3 bg-[#1a1a1c] p-5 rounded-xl border border-[#3f3f46] mb-8 w-full shadow-sm no-print">
+                        <span class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mr-2">Timeframe Filter:</span>
+                        ${mBtns}
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start w-full">
+                        ${gh}
+                    </div>
+                </div>
+            `;
+        }
+
+        window.updateF = (type, val) => {
+            if(type === 'm') state.monthFilter = val;
+            navigate(state.view);
+        };
+
+    </script>
+</body>
+</html>
