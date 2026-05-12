@@ -40,10 +40,10 @@
         .chart-container {
             position: relative;
             width: 100%;
-            height: 250px;
+            min-height: 250px;
         }
         @media (min-width: 768px) {
-            .chart-container { height: 300px; }
+            .chart-container { min-height: 300px; }
         }
 
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -92,6 +92,17 @@
             background-color: rgba(241, 94, 39, 0.1);
             border-bottom-color: var(--nomaro-orange);
             border-radius: 4px 4px 0 0;
+        }
+
+        /* Standardize select element arrows */
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='%235e5e63' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+            background-repeat: no-repeat;
+            background-position-x: 98%;
+            background-position-y: 50%;
         }
 
         .hide-scrollbar::-webkit-scrollbar { display: none; }
@@ -168,7 +179,7 @@
                 <span class="text-[#f15e27] font-bold tracking-widest uppercase text-[10px]">Confidential</span>
                 <span contenteditable="true" onblur="updateDB('exec.docTitle', this)" id="docTitle">MADE BY KOOTHU</span>
                 <span contenteditable="true" onblur="updateDB('exec.docVersion', this)">v1.0.0</span>
-                <button onclick="clearCache()" class="text-left mt-2 hover:text-red-500 transition-colors uppercase tracking-widest text-[10px]">Clear Cache</button>
+                <button onclick="clearCache()" class="text-left mt-2 text-[#5e5e63] hover:text-red-500 transition-colors uppercase tracking-widest text-[10px]">Clear Cache</button>
             </div>
         </div>
     </nav>
@@ -177,6 +188,9 @@
     <main class="flex-grow overflow-y-auto bg-[#0f0f10] p-4 sm:p-8 md:p-12 relative w-full min-w-0" id="main-content">
         <!-- Views injected via JS -->
     </main>
+
+    <!-- Dedicated Print Container (Hidden on Screen, Visible on Print) -->
+    <div id="print-container" class="hidden"></div>
 
     <!-- Hidden Input for File Import -->
     <input type="file" id="importFile" accept=".json" onchange="importData(event)" class="hidden">
@@ -234,12 +248,21 @@
                     <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Content Title / Theme *</label>
                     <input type="text" id="newTitle" placeholder="e.g. Feature Highlight" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
                 </div>
-                <div>
-                    <label class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest block mb-1">Month Category</label>
-                    <select id="newMonthSelect" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
-                        <!-- Injected dynamically -->
-                    </select>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest block mb-1">Month Category</label>
+                        <select id="newMonthSelect" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
+                            <!-- Injected dynamically -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Link to Phase</label>
+                        <select id="newPhaseSelect" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
+                            <!-- Injected dynamically -->
+                        </select>
+                    </div>
                 </div>
+                
                 <div class="text-red-500 text-xs hidden" id="addError">Date and Content Title are mandatory.</div>
                 <button onclick="saveNewContent()" class="mt-4 bg-[#f15e27] hover:bg-[#d44c1a] text-white font-tech text-[10px] uppercase tracking-widest py-3.5 rounded-md transition-colors">
                     Create Content Card
@@ -254,6 +277,20 @@
     </div>
 
     <script>
+        // --- 0. GLOBAL EVENT LISTENERS (Maintain plain text formatting on paste) ---
+        document.addEventListener('paste', function(e) {
+            let target = e.target;
+            while (target && target.nodeType === 1) {
+                if (target.getAttribute('contenteditable') === 'true') {
+                    e.preventDefault();
+                    let text = (e.originalEvent || e).clipboardData.getData('text/plain');
+                    document.execCommand('insertText', false, text);
+                    break;
+                }
+                target = target.parentNode;
+            }
+        });
+
         // --- 1. UTILITIES & GLOBALLY EDITABLE DATA BINDING ---
         function parseFullDigits(str) {
             let numStr = str.toString().replace(/[^0-9]/g, '');
@@ -261,7 +298,7 @@
         }
 
         function formatINR(num) {
-            return Number(num).toLocaleString('en-IN');
+            return `₹${Number(num).toLocaleString('en-IN')}`;
         }
 
         function showToast(message) {
@@ -296,7 +333,19 @@
             window.db.production[i].budget = val;
             autoSave();
             navigate(state.view);
-        }
+        };
+
+        window.updateCalendarPhase = function(index, val) {
+            window.db.calendar[index].phaseId = val === "null" ? null : parseInt(val);
+            autoSave();
+            navigate(state.view); // Triggers re-render across views
+        };
+
+        window.updateProductionPhase = function(index, val) {
+            window.db.production[index].phaseId = val === "null" ? null : parseInt(val);
+            autoSave();
+            navigate(state.view); // Triggers re-render across views
+        };
 
         // --- 1B. FILE SYSTEM SAVE / LOAD LOGIC ---
         function autoSave() {
@@ -307,7 +356,7 @@
             if(confirm("Are you sure you want to clear all data and reset to defaults?")) {
                 localStorage.removeItem('nomaro_autosave');
                 localStorage.removeItem('nomaro_versions');
-                window.db = JSON.parse(JSON.stringify(defaultDb)); // Deep clone to reset
+                window.db = JSON.parse(JSON.stringify(defaultDb)); 
                 autoSave();
                 navigate(state.view);
                 const dt = document.getElementById('docTitle');
@@ -316,6 +365,7 @@
             }
         };
 
+        // Local Storage specific save
         window.saveVersion = function() {
             const vName = prompt("Enter a name for this strategy version:");
             if(!vName) return;
@@ -370,16 +420,21 @@
             openLoadModal(); 
         }
 
-        // External JSON file Export/Import for GitHub hosting
+        // External JSON file Export/Import
         window.exportData = function() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.db, null, 2));
+            const dataStr = JSON.stringify(window.db, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            
             const dlAnchorElem = document.createElement('a');
-            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("href", url);
             dlAnchorElem.setAttribute("download", "nomaro_strategy_state.json");
             document.body.appendChild(dlAnchorElem);
             dlAnchorElem.click();
             dlAnchorElem.remove();
-            showToast('JSON file downloaded to PC');
+            
+            URL.revokeObjectURL(url); // Clean up memory
+            showToast('JSON file downloaded');
         };
 
         window.triggerImport = function() {
@@ -388,7 +443,9 @@
 
         window.importData = function(event) {
             const file = event.target.files[0];
+            event.target.value = ''; // Reset input to allow re-upload of same file
             if (!file) return;
+            
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -408,24 +465,38 @@
                 }
             };
             reader.readAsText(file);
-            event.target.value = ''; 
         };
 
         // --- MIGRATION UTILITY ---
-        // Converts old "35" or "18.5" Lakh budgets into pure digits (3500000)
         function migrateData(dataObj) {
+            if(!dataObj.exec.brandPositioning) {
+                dataObj.exec.brandPositioning = {
+                    core: "Nomaro is not just a bag; it's a dependable companion for life's transitions.",
+                    emotional: "Rooted in heartfelt storytelling, empathy, and quiet confidence.",
+                    personality: "Calm, thoughtful, aspirational, and meticulously engineered."
+                };
+            }
+            if(!dataObj.exec.targetAudience) {
+                dataObj.exec.targetAudience = {
+                    primary: "Urban Commuters and Empathetic Creatives aged 25-35 navigating major life transitions.",
+                    secondary: "Mass Premium Market and Corporate Gifting segment looking for high-utility, understated design."
+                };
+            }
             if(dataObj.months) {
                 dataObj.months.forEach(m => m.phases.forEach(p => {
-                    if (typeof p.budget === 'string' && parseFloat(p.budget) < 1000) {
-                        p.budget = parseFloat(p.budget) * 100000;
-                    }
+                    if (p.budget >= 1000) { p.budget = p.budget / 100000; }
+                    if (typeof p.desc === 'undefined') p.desc = "A brief description of this phase's core objective.";
                 }));
             }
             if(dataObj.production) {
                 dataObj.production.forEach(p => {
-                    if (typeof p.budget === 'string' && parseFloat(p.budget) < 1000) {
-                        p.budget = parseFloat(p.budget) * 100000;
-                    }
+                    if (p.budget >= 1000) { p.budget = p.budget / 100000; }
+                    if (typeof p.phaseId === 'undefined') p.phaseId = null;
+                });
+            }
+            if(dataObj.calendar) {
+                dataObj.calendar.forEach(c => {
+                    if(typeof c.phaseId === 'undefined') c.phaseId = null;
                 });
             }
             return dataObj;
@@ -440,17 +511,22 @@
             document.getElementById('app-body').classList.remove('h-screen', 'overflow-hidden');
 
             const main = document.getElementById('main-content');
-            main.innerHTML = '';
+            const printContainer = document.getElementById('print-container');
+            
+            // Swap visibility
+            main.style.display = 'none';
+            printContainer.classList.remove('hidden');
+            printContainer.innerHTML = '';
             
             const v1 = document.createElement('div'); v1.className = 'print-section';
             const v2 = document.createElement('div'); v2.className = 'print-section';
             const v3 = document.createElement('div'); v3.className = 'print-section';
             const v4 = document.createElement('div'); v4.className = 'print-section';
             
-            main.appendChild(v1);
-            main.appendChild(v2);
-            main.appendChild(v3);
-            main.appendChild(v4);
+            printContainer.appendChild(v1);
+            printContainer.appendChild(v2);
+            printContainer.appendChild(v3);
+            printContainer.appendChild(v4);
 
             const originalMonthFilter = state.monthFilter;
             const originalMonthId = state.monthId;
@@ -479,8 +555,8 @@
             renderProduction(v3);
             renderContent(v4);
             
-            // Hide all remaining no-print elements
-            main.querySelectorAll('.no-print, button:not(.nav-btn)').forEach(el => {
+            // Hide all remaining no-print elements and dropdowns in the print layout
+            printContainer.querySelectorAll('.no-print, button:not(.nav-btn), select').forEach(el => {
                 el.style.display = 'none';
             });
             
@@ -490,10 +566,14 @@
             setTimeout(() => {
                 window.print();
                 
-                document.getElementById('app-body').classList.add('h-screen', 'overflow-hidden');
+                // Restore original state
+                printContainer.innerHTML = '';
+                printContainer.classList.add('hidden');
+                main.style.display = '';
+                
                 Chart.defaults.animation = true;
                 navigate(currentView); 
-            }, 1000);
+            }, 800);
         }
 
         // --- 2. DATA STORE ---
@@ -503,6 +583,15 @@
             exec: {
                 timeline: "May 15 (Shopify) → July 1 (Amazon)",
                 summary: "This dashboard outlines the Go-To-Market strategy, balancing aesthetic appeal with highly engineered product delivery. Use the breakdown below to review or modify capital allocations instantly.",
+                brandPositioning: {
+                    core: "Nomaro is not just a bag; it's a dependable companion for life's transitions.",
+                    emotional: "Rooted in heartfelt storytelling, empathy, and quiet confidence.",
+                    personality: "Calm, thoughtful, aspirational, and meticulously engineered."
+                },
+                targetAudience: {
+                    primary: "Urban Commuters and Empathetic Creatives aged 25-35 navigating major life transitions.",
+                    secondary: "Mass Premium Market and Corporate Gifting segment looking for high-utility, understated design."
+                },
                 docTitle: "MADE BY KOOTHU",
                 docVersion: "v1.0.0"
             },
@@ -511,76 +600,21 @@
                     id: 1, name: "May 2026", active: true,
                     phases: [
                         {
-                            id: 101, title: "Digital Flagship Soft Launch", budget: 0,
+                            id: 101, title: "Digital Flagship Soft Launch", budget: 0, desc: "A tightly controlled soft launch to validate fulfillment logistics and reward our early subscriber base.",
                             audience: "Waitlist Subscribers, Early Adopters",
                             kpis: ["Shopify Store Live", "10,000 Early Site Visitors"],
                             actions: [
-                                { tag: "Shopify", text: "Store design finalized. Password drops to community, triggering the D2C flagship launch in mid-May." },
-                                { tag: "Social", text: "Launch IG & TikTok. Tease the Shopify drop and deploy the first emotional campaign visuals to build the base audience." }
-                            ],
-                            deliv: ["Live Shopify Store (May)", "Welcome Email Sequence"]
-                        }
-                    ]
-                },
-                {
-                    id: 2, name: "June 2026", active: true,
-                    phases: [
-                        {
-                            id: 201, title: "Marketplace Preparation", budget: 0,
-                            audience: "Broad Urban Commuters, Amazon Shoppers",
-                            kpis: ["Setup Amazon A+ Content", "Generate Top 50 keywords list"],
-                            actions: [
-                                { tag: "Amazon", text: "Prepare controlled sales logistics. Focus on gathering early reviewers." },
-                                { tag: "Ads", text: "Deploy remarketing ad set driving traffic selectively to Shopify." }
-                            ],
-                            deliv: ["Amazon A+ Content Deck", "Influencer Seed Kits"]
-                        }
-                    ]
-                },
-                {
-                    id: 3, name: "July 2026", active: true,
-                    phases: [
-                        {
-                            id: 301, title: "Amazon Hard Launch", budget: 0,
-                            audience: "Amazon Shoppers, Prime Members",
-                            kpis: ["July 1 Amazon Launch", "First 100 Authentic Reviews"],
-                            actions: [
-                                { tag: "Amazon", text: "Initiate controlled sales on July 1. Establish organic ranking." },
-                                { tag: "Social", text: "Maintain momentum with product-in-the-wild features." }
-                            ],
-                            deliv: ["Live Amazon Listing (July 1)", "Performance Ad Deployment"]
-                        }
-                    ]
-                },
-                {
-                    id: 4, name: "August 2026", active: true,
-                    phases: [
-                        {
-                            id: 401, title: "Shared Journeys UGC", budget: 0,
-                            audience: "Broad Market, Remarketing Pool",
-                            kpis: ["15,000 New Followers", "500+ Authentic Reviews"],
-                            actions: [
-                                { tag: "Social", text: "Launch UGC initiative: 'What are you carrying tomorrow?'." },
-                                { tag: "Amazon", text: "Scale profitable PPC campaigns. Monitor Buy Box." }
-                            ],
-                            deliv: ["UGC Ad Creatives", "Amazon Vine Reviews", "Email Journey Workflows"]
+                                { tag: "Infrastructure", text: "Finalize Shopify architecture, implement pixel tracking, and conduct end-to-end stress testing for checkout." }
+                            ]
                         }
                     ]
                 }
             ],
             production: [
-                { id: 1, cat: "Physical Shoot", title: "Campaign Cinema", desc: "3-day shoot capturing narrative 'Transitions' brand films. Focus on emotional storytelling.", date: "May 5-8, 2026", budget: 0 },
-                { id: 2, cat: "Physical Shoot", title: "E-Commerce Catalogue", desc: "Studio environment. Macro focus on functional details, YKK zips, and interior capacity.", date: "May 10-11, 2026", budget: 0 },
-                { id: 3, cat: "Physical Shoot", title: "Lifestyle & UGC Capture", desc: "Raw, unpolished environments for Meta/TikTok ads. Mobile-first framing.", date: "May 12, 2026", budget: 0 },
-                { id: 4, cat: "Post-Production", title: "Hero Film Edit", desc: "Color grading, sound design (ASMR focus), and master formatting for 16:9 and 9:16.", date: "May 15-25, 2026", budget: 0 },
-                { id: 5, cat: "Post-Production", title: "Social Ad Cutdowns", desc: "15s, 30s high-hook variations optimized for fast-paced vertical feeds.", date: "May 26-28, 2026", budget: 0 }
+                { id: 1, cat: "Pre-Production", phaseId: 101, title: "Campaign Storyboarding", desc: "Develop shot lists, scout urban commute locations, and lock in talent for the primary brand anthem video.", date: "April 20-25, 2026", budget: 0 }
             ],
             calendar: [
-                { m: "May 2026", d: "May 1", time: "09:00 AM IST", t: "Behind the Scenes", v: "Teaser photo from the first product shoot. Studio lighting, blurry product.", r: "Builds early hype and shows momentum by sharing the physical production process.", c: "Bringing the companion to life. Day 1 on set.", plats: { ...platformDefaults(), instagram: true } },
-                { m: "May 2026", d: "May 10", time: "10:30 AM IST", t: "The Digital Flagship", v: "Dark-mode screenshot of the upcoming Shopify site interface.", r: "Prepares the waitlist for the upcoming Shopify drop. Builds D2C anticipation.", c: "Our digital home is almost ready. Keep an eye on your inbox.", plats: { ...platformDefaults(), email: true, website: true } },
-                { m: "June 2026", d: "June 6", time: "06:00 PM IST", t: "ASMR Packing", v: "Crisp sounds of a laptop, tech pouch, and notebook sliding seamlessly into unseen sleeves.", r: "Demonstrates utility and capacity in a highly satisfying, shareable format.", c: "A place for everything. #ASMR", plats: { ...platformDefaults(), tiktok: true, youtube: true } },
-                { m: "July 2026", d: "July 1", time: "09:00 AM IST", t: "Amazon Launch", v: "Hero product shot, fully lit, bright and aspirational. 'NOW ON AMAZON'.", r: "Clear, direct call to action to capture existing marketplace intent.", c: "The Silent Companion is here. Shop the drop on Amazon now.", plats: { ...platformDefaults(), facebook: true, instagram: true, website: true } },
-                { m: "August 2026", d: "Aug 2", time: "11:00 AM IST", t: "Site Tour", v: "Carousel showing different sections of the website, including 'The Journal'.", r: "Pushes Amazon buyers back to the D2C platform to build owned relationships.", c: "More than a store. A place for shared journeys. Explore nomaro.in.", plats: { ...platformDefaults(), instagram: true, email: true } }
+                { m: "May 2026", phaseId: 101, d: "May 1", time: "09:00 AM IST", t: "The Manifesto Drop", v: "High-contrast text graphic outlining the brand mission statement over a blurred urban landscape.", r: "Establishes the core brand 'why' before introducing any product visuals to capture high-intent early adopters.", c: "We didn't set out to make another bag. We set out to make a companion. Read our manifesto at the link in bio.", plats: { ...platformDefaults(), instagram: true, email: true } }
             ]
         };
 
@@ -588,7 +622,6 @@
         if (autosaved) {
             window.db = migrateData(JSON.parse(autosaved));
         } else {
-            // Setup fresh deeply-cloned copy
             window.db = JSON.parse(JSON.stringify(defaultDb));
         }
 
@@ -656,33 +689,31 @@
 
         // View 1: Project Overview 
         function renderExec(container) {
-            let totalDigits = 0;
+            let totalPhaseDigits = 0;
             let totalProdDigits = 0;
             const phaseList = [];
             const timelineEvents = [];
 
-            // Gather Roadmap Data
             const monthBudgets = {};
             window.db.months.filter(m => m.active).forEach(m => {
                 monthBudgets[m.name] = 0;
                 m.phases.forEach(p => {
                     const b = parseInt(p.budget) || 0;
-                    totalDigits += b;
+                    totalPhaseDigits += b;
                     monthBudgets[m.name] += b;
                     phaseList.push({ month: m.name, title: p.title, budget: b });
                     timelineEvents.push({ date: m.name, type: 'Phase', title: p.title });
                 });
             });
 
-            // Gather Production Data
             window.db.production.forEach(p => {
                 const b = parseInt(p.budget) || 0;
                 totalProdDigits += b;
-                totalDigits += b;
                 timelineEvents.push({ date: p.date, type: 'Production', title: p.title });
             });
             
-            // Build Month-based Chart Data
+            const totalDigits = totalPhaseDigits + totalProdDigits;
+
             const chartLabels = [...Object.keys(monthBudgets), 'Media Production'];
             const chartData = [...Object.values(monthBudgets), totalProdDigits];
             const isZeroBudget = chartData.reduce((a, b) => a + b, 0) === 0;
@@ -691,13 +722,13 @@
             const totalCr = (totalDigits / 10000000).toFixed(2);
 
             const phaseBreakdowns = phaseList.map((p) => `
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 border-b border-[#3f3f46] last:border-0 gap-2 sm:gap-4 w-full">
-                    <div class="flex flex-col min-w-0 flex-grow w-full">
-                        <span class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest break-words whitespace-normal block w-full">${p.month}</span>
-                        <span class="text-sm font-primary text-[#fafafa] break-words whitespace-normal leading-relaxed block w-full mt-1">${p.title}</span>
+                <div class="flex flex-row justify-between items-center py-3 border-b border-[#3f3f46] last:border-0 gap-3 w-full">
+                    <div class="flex flex-col min-w-0 flex-grow">
+                        <span class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest truncate w-full">${p.month}</span>
+                        <span class="text-sm font-primary text-[#fafafa] truncate w-full mt-0.5">${p.title}</span>
                     </div>
-                    <span class="text-sm font-tech font-bold text-[#fafafa] flex items-center gap-1 shrink-0 mt-1 sm:mt-0 whitespace-nowrap">
-                        <span class="text-[#a1a1aa] font-normal text-[10px] mr-1">INR</span> ${(p.budget/100000).toFixed(2)} Lakhs
+                    <span class="text-sm font-tech font-bold text-[#fafafa] shrink-0 whitespace-nowrap">
+                        ${formatINR(p.budget)}
                     </span>
                 </div>
             `).join('');
@@ -709,7 +740,6 @@
                 </div>
             `).join('');
 
-            // Unique ID per render to avoid Chart JS context clashes
             const chartId = 'bChartDonut_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
 
             container.innerHTML = `
@@ -717,9 +747,43 @@
                     <div class="mb-10 w-full">
                         <h2 class="text-5xl md:text-7xl font-editorial italic mb-6 text-[#fafafa] tracking-tight block w-full break-words whitespace-normal">Project Overview</h2>
                         <div class="py-2 w-full">
-                            <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-words whitespace-normal" contenteditable="true" onblur="updateDB('exec.summary', this)">
+                            <h3 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mb-2 block">Project Description</h3>
+                            <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-words whitespace-normal border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('exec.summary', this)">
                                 ${window.db.exec.summary}
                             </p>
+                        </div>
+                    </div>
+
+                    <!-- Strategy Blocks -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 w-full items-start">
+                        <div class="bg-[#1a1a1c] p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full h-full min-w-0 avoid-break break-inside-avoid">
+                            <h3 class="text-sm font-tech text-[#f15e27] uppercase tracking-widest block mb-6 w-full break-words whitespace-normal">Brand Positioning Strategy</h3>
+                            
+                            <div class="mb-6">
+                                <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest mb-2">Core Positioning</p>
+                                <p class="font-primary text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27] min-w-0 block w-full break-words whitespace-normal" contenteditable="true" onblur="updateDB('exec.brandPositioning.core', this)">${window.db.exec.brandPositioning.core}</p>
+                            </div>
+                            <div class="mb-6">
+                                <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest mb-2">Emotional Territory</p>
+                                <p class="font-primary text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27] min-w-0 block w-full break-words whitespace-normal" contenteditable="true" onblur="updateDB('exec.brandPositioning.emotional', this)">${window.db.exec.brandPositioning.emotional}</p>
+                            </div>
+                            <div>
+                                <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest mb-2">Brand Personality</p>
+                                <p class="font-primary text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27] min-w-0 block w-full break-words whitespace-normal" contenteditable="true" onblur="updateDB('exec.brandPositioning.personality', this)">${window.db.exec.brandPositioning.personality}</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-[#1a1a1c] p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full h-full min-w-0 avoid-break break-inside-avoid">
+                            <h3 class="text-sm font-tech text-[#f15e27] uppercase tracking-widest block mb-6 w-full break-words whitespace-normal">Target Audience Strategy</h3>
+                            
+                            <div class="mb-6">
+                                <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest mb-2">Primary Audience</p>
+                                <p class="font-primary text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27] min-w-0 block w-full break-words whitespace-normal" contenteditable="true" onblur="updateDB('exec.targetAudience.primary', this)">${window.db.exec.targetAudience.primary}</p>
+                            </div>
+                            <div>
+                                <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest mb-2">Secondary Audience</p>
+                                <p class="font-primary text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27] min-w-0 block w-full break-words whitespace-normal" contenteditable="true" onblur="updateDB('exec.targetAudience.secondary', this)">${window.db.exec.targetAudience.secondary}</p>
+                            </div>
                         </div>
                     </div>
 
@@ -728,26 +792,18 @@
                         <div class="lg:col-span-5 flex flex-col w-full bg-[#1a1a1c] p-4 sm:p-6 md:p-8 rounded-xl border border-[#3f3f46] avoid-break break-inside-avoid">
                             <div class="w-full">
                                 <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest mb-2 block">Total Capital Allocation</p>
-                                <p class="text-4xl font-primary font-bold text-[#fafafa] mb-1 block w-full break-words">${totalLakhs} Lakhs</p>
+                                <p class="text-4xl font-primary font-bold text-[#fafafa] mb-1 block w-full truncate">${formatINR(totalDigits)}</p>
                                 <p class="text-sm font-tech text-[#a1a1aa] mb-6">≈ ${totalCr} Cr INR</p>
                             </div>
                             
                             <div class="pt-6 border-t border-[#3f3f46] w-full">
-                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
-                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Phase-wise Allocation</p>
-                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Total: ${((totalDigits - totalProdDigits)/100000).toFixed(2)} Lakhs</p>
+                                <div class="flex flex-row justify-between items-center mb-4 gap-2">
+                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest truncate">Phase-wise</p>
+                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest whitespace-nowrap shrink-0">Total: ${formatINR(totalPhaseDigits)}</p>
                                 </div>
                                 <div class="flex flex-col w-full">
                                     ${phaseBreakdowns || `<p class="text-sm text-[#5e5e63] italic w-full">No phases scheduled.</p>`}
                                 </div>
-                            </div>
-                            
-                            <div class="pt-6 border-t border-[#3f3f46] mt-4 w-full">
-                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
-                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Media Production</p>
-                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest block">Total: ${(totalProdDigits/100000).toFixed(2)} Lakhs</p>
-                                </div>
-                                <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed w-full break-words">Includes all physical shoots and post-production editing allocated in the Media Production section.</p>
                             </div>
                         </div>
 
@@ -755,14 +811,14 @@
                         <div class="lg:col-span-7 flex flex-col gap-8 w-full min-w-0">
                             
                             <div class="bg-[#1a1a1c] p-4 sm:p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full avoid-break break-inside-avoid min-w-0">
-                                <h3 class="text-sm font-primary font-bold block mb-4 w-full break-words whitespace-normal text-center sm:text-left">Capital Distribution by Month</h3>
-                                <div class="chart-container w-full min-w-0 relative">
+                                <h3 class="text-sm font-primary font-bold block mb-4 w-full whitespace-nowrap truncate sm:whitespace-normal sm:overflow-visible">Capital Distribution by Month</h3>
+                                <div class="chart-container w-full flex-grow relative min-h-[250px]">
                                     <canvas id="${chartId}"></canvas>
                                 </div>
                             </div>
 
                             <div class="bg-[#1a1a1c] p-4 sm:p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full avoid-break break-inside-avoid min-w-0">
-                                <h3 class="text-sm font-primary font-bold block mb-6 w-full break-words whitespace-normal">Strategic Timeline</h3>
+                                <h3 class="text-sm font-primary font-bold block mb-6 w-full">Strategic Timeline</h3>
                                 <div class="flex flex-col w-full">
                                     ${masterTimelineHtml || `<p class="text-sm text-[#5e5e63] italic w-full">No timeline events generated.</p>`}
                                 </div>
@@ -791,13 +847,13 @@
                     options: { 
                         responsive: true, maintainAspectRatio: false, cutout: '75%', 
                         plugins: { 
-                            legend: { display: true, position: window.innerWidth < 1024 ? 'bottom' : 'right', labels: {color: '#a1a1aa', padding: 15, font: { family: "'Plus Jakarta Sans', sans-serif" }} },
+                            legend: { display: true, position: window.innerWidth < 1024 ? 'bottom' : 'right', labels: {color: '#a1a1aa', padding: 15, font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 }} },
                             tooltip: { 
                                 backgroundColor: '#0f0f10', padding: 12, titleFont: { family: "'Plus Jakarta Sans', sans-serif" }, bodyFont: { family: "'Plus Jakarta Sans', sans-serif" }, 
                                 callbacks: { 
                                     label: (ctx) => {
-                                        if(isZeroBudget) return ' ₹ 0 Lakhs';
-                                        return ` ${(ctx.raw/100000).toFixed(2)} Lakhs`;
+                                        if(isZeroBudget) return ' ₹ 0';
+                                        return ` ${formatINR(ctx.raw)}`;
                                     } 
                                 } 
                             }
@@ -858,10 +914,9 @@
         window.addPhase = function(mIndex) {
             const newId = Date.now();
             window.db.months[mIndex].phases.push({
-                id: newId, title: "New Phase", budget: "0",
+                id: newId, title: "New Phase", budget: "0", desc: "Phase description.",
                 audience: "Define Audience", kpis: ["New KPI"],
-                actions: [],
-                deliv: ["New Deliverable"]
+                actions: []
             });
             autoSave();
             navigate(state.view);
@@ -869,6 +924,18 @@
 
         window.deletePhase = function(mIndex, pIndex) {
             window.db.months[mIndex].phases.splice(pIndex, 1);
+            autoSave();
+            navigate(state.view);
+        }
+
+        window.addAction = function(mIndex, pIndex) {
+            window.db.months[mIndex].phases[pIndex].actions.push({ tag: "Tag", text: "Action description." });
+            autoSave();
+            navigate(state.view);
+        }
+
+        window.deleteAction = function(mIndex, pIndex, aIndex) {
+            window.db.months[mIndex].phases[pIndex].actions.splice(aIndex, 1);
             autoSave();
             navigate(state.view);
         }
@@ -899,8 +966,18 @@
                         <span contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.kpis.${i}', this)" class="flex-grow block w-full break-words whitespace-normal min-w-0 text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27]">${k}</span>
                     </li>
                 `).join('');
+
+                const acts = (p.actions || []).map((a, i) => `
+                    <div class="relative group/action w-full border-l border-[#3f3f46] pl-4 py-2 hover:border-[#f15e27] transition-colors bg-[#0f0f10] p-4 rounded-r-lg">
+                        <button onclick="window.deleteAction(${mIndex}, ${pIndex}, ${i})" class="absolute top-2 right-2 text-[#5e5e63] hover:text-red-500 md:opacity-0 group-hover/action:opacity-100 transition-opacity text-xl font-bold leading-none w-6 h-6 rounded flex justify-center items-center pb-1 no-print">&times;</button>
+                        <span class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-2 max-w-[85%] min-w-0 break-words border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.actions.${i}.tag', this)">${a.tag}</span>
+                        <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-words min-w-0 border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.actions.${i}.text', this)">${a.text}</p>
+                    </div>
+                `).join('');
                 
-                const dels = p.deliv.map((d, i) => `<span class="inline-block border border-[#3f3f46] text-xs font-primary px-3 py-1.5 rounded-full m-1 border border-transparent focus:border-[#f15e27] min-w-0 break-words whitespace-normal" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.deliv.${i}', this)">${d}</span>`).join('');
+                // Fetch dynamically linked data
+                const linkedDels = window.db.calendar.filter(c => c.phaseId === p.id).map((c) => `<span class="inline-block border border-[#f15e27] text-[#f15e27] bg-[#f15e27] bg-opacity-10 text-xs font-primary px-3 py-1.5 rounded-full m-1 min-w-0 break-words whitespace-normal" title="Linked from Calendar">${c.t}</span>`).join('');
+                const linkedProds = window.db.production.filter(pr => pr.phaseId === p.id).map((pr) => `<span class="inline-block border border-[#a1a1aa] text-[#fafafa] bg-[#3f3f46] bg-opacity-50 text-xs font-primary px-3 py-1.5 rounded-full m-1 min-w-0 break-words whitespace-normal" title="Linked from Production">${pr.title}</span>`).join('');
 
                 return `
                 <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-2xl overflow-hidden fade-in relative w-full shadow-sm mb-12 last:mb-0 break-inside-avoid">
@@ -912,24 +989,48 @@
                         </div>
                         <div class="bg-[#1a1a1c] border border-[#3f3f46] px-4 py-2 rounded-lg w-full md:w-auto flex items-center gap-3 shrink-0">
                             <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest shrink-0">Capital (INR):</p>
-                            <p class="text-lg font-tech font-bold text-[#fafafa] min-w-[30px] border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateBudget(${mIndex}, ${pIndex}, this)">${formatINR(p.budget).replace('₹ ', '')}</p>
+                            <p class="text-lg font-tech font-bold text-[#fafafa] min-w-[30px] border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateBudget(${mIndex}, ${pIndex}, this)">${formatINR(p.budget).replace('₹', '').trim()}</p>
                         </div>
                     </div>
                     
                     <div class="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-10 w-full">
                         <div class="w-full min-w-0">
-                            <h4 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mb-3">Target Audience</h4>
-                            <p class="text-sm font-primary text-[#fafafa] block w-full break-words whitespace-normal min-w-0 leading-relaxed border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.audience', this)">${p.audience}</p>
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63]">Strategic Actions</h4>
+                                <button onclick="window.addAction(${mIndex}, ${pIndex})" class="text-[#f15e27] hover:text-[#fafafa] font-tech text-[10px] uppercase tracking-widest transition-colors border border-[#3f3f46] px-2 py-1 rounded bg-[#0f0f10] no-print">+ Add</button>
+                            </div>
+                            <div class="flex flex-col gap-4 w-full min-w-0 mb-6">${acts}</div>
+                            
+                            <div class="w-full min-w-0">
+                                <h4 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mb-3">Phase Description</h4>
+                                <p class="text-sm font-primary text-[#fafafa] block w-full break-words whitespace-normal min-w-0 leading-relaxed border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.desc', this)">${p.desc}</p>
+                            </div>
                         </div>
-                        <div class="w-full min-w-0">
-                            <h4 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mb-3">Key Metrics (KPIs)</h4>
-                            <ul class="space-y-3 w-full min-w-0">${kpis}</ul>
+                        <div class="space-y-8 w-full min-w-0">
+                            <div class="w-full min-w-0">
+                                <h4 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mb-3">Target Audience</h4>
+                                <p class="text-sm font-primary text-[#fafafa] block w-full break-words whitespace-normal min-w-0 leading-relaxed border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.audience', this)">${p.audience}</p>
+                            </div>
+                            <div class="w-full min-w-0">
+                                <h4 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mb-3">Key Metrics (KPIs)</h4>
+                                <ul class="space-y-3 w-full min-w-0">${kpis}</ul>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="p-6 md:p-8 border-t border-[#3f3f46] w-full min-w-0 bg-[#0f0f10]">
-                        <h4 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mb-4">Required Deliverables</h4>
-                        <div class="-m-1 flex flex-wrap w-full min-w-0">${dels}</div>
+                    <div class="p-6 md:p-8 border-t border-[#3f3f46] w-full min-w-0 bg-[#0f0f10] grid grid-cols-1 md:grid-cols-2 gap-10">
+                        <div class="w-full min-w-0">
+                            <h4 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mb-4">Required Media Production</h4>
+                            <div class="-m-1 flex flex-wrap w-full min-w-0">
+                                ${linkedProds || `<p class="text-xs text-[#5e5e63] italic m-1">No production projects linked.</p>`}
+                            </div>
+                        </div>
+                        <div class="w-full min-w-0">
+                            <h4 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mb-4">Required Deliverables</h4>
+                            <div class="-m-1 flex flex-wrap w-full min-w-0">
+                                ${linkedDels || `<p class="text-xs text-[#5e5e63] italic m-1">No calendar deliverables linked.</p>`}
+                            </div>
+                        </div>
                     </div>
                 </div>
                 `;
@@ -941,7 +1042,7 @@
                         <h2 class="text-4xl font-editorial italic mb-4 text-[#fafafa] block w-full break-words whitespace-normal" contenteditable="true">Strategic Roadmap</h2>
                         <div class="py-2 w-full mb-6">
                             <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-words whitespace-normal min-w-0" contenteditable="true">
-                                Explore and edit the chronological deployment. Enable timeline months below, or add entirely new months to the schedule. Select a month tab to view its associated phases.
+                                Explore and edit the chronological deployment. Required deliverables and media are automatically generated from items linked to this phase.
                             </p>
                         </div>
                         
@@ -972,7 +1073,7 @@
 
         // View 3: Media Production
         window.addProdProject = function() {
-            window.db.production.push({ id: Date.now(), cat: "New Category", title: "New Project", desc: "Add details here.", date: "TBD", budget: "0" });
+            window.db.production.push({ id: Date.now(), phaseId: null, cat: "New Category", title: "New Project", desc: "Add details here.", date: "TBD", budget: "0" });
             autoSave();
             navigate(state.view);
         }
@@ -984,7 +1085,17 @@
         }
 
         function renderProduction(container) {
-            const projectsHtml = window.db.production.map((p, i) => `
+            const allPhases = [];
+            window.db.months.forEach(m => {
+                if(m.active) {
+                    m.phases.forEach(p => allPhases.push({ id: p.id, title: p.title, month: m.name }));
+                }
+            });
+
+            const projectsHtml = window.db.production.map((p, i) => {
+                const phaseOptions = allPhases.map(ph => `<option value="${ph.id}" ${p.phaseId == ph.id ? 'selected' : ''}>${ph.title} (${ph.month})</option>`).join('');
+
+                return `
                 <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-xl p-6 md:p-8 hover:border-[#f15e27] transition-colors flex flex-col h-full w-full min-w-0 relative group break-inside-avoid">
                     <button onclick="window.deleteProdProject(${i})" class="absolute top-4 right-4 text-[#5e5e63] hover:text-red-500 md:opacity-0 group-hover:opacity-100 transition-opacity text-xl font-bold leading-none w-8 h-8 rounded-full flex justify-center items-center pb-1 z-10 no-print">&times;</button>
                     
@@ -998,15 +1109,24 @@
 
                     <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed flex-grow block w-full break-words whitespace-normal min-w-0 mb-6 border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('production.${i}.desc', this)">${p.desc}</p>
                     
-                    <div class="pt-5 border-t border-[#3f3f46] mt-auto w-full min-w-0 flex justify-between items-center">
+                    <div class="pt-5 border-t border-[#3f3f46] mt-auto w-full min-w-0 flex justify-between items-center mb-4">
                         <span class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] block">Allocated Budget</span>
                         <p class="font-tech text-lg text-[#fafafa] flex items-center gap-1">
                             <span class="text-[10px] text-[#a1a1aa] font-normal">INR</span> 
-                            <span class="border border-transparent focus:border-b-[#f15e27] min-w-[30px] text-right" contenteditable="true" onblur="updateProdBudget(${i}, this)">${formatINR(p.budget).replace('₹ ', '')}</span>
+                            <span class="border border-transparent focus:border-b-[#f15e27] min-w-[30px] text-right" contenteditable="true" onblur="updateProdBudget(${i}, this)">${formatINR(p.budget).replace('₹', '').trim()}</span>
                         </p>
                     </div>
+
+                    <div class="pt-4 border-t border-[#3f3f46] no-print w-full min-w-0">
+                        <span class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest block mb-2">Linked Strategic Phase</span>
+                        <select onchange="updateProductionPhase(${i}, this.value)" class="w-full bg-[#0f0f10] border border-[#3f3f46] text-[#fafafa] font-primary text-xs px-3 py-2 rounded focus:outline-none focus:border-[#f15e27] transition-colors cursor-pointer">
+                            <option value="null">-- Unassigned --</option>
+                            ${phaseOptions}
+                        </select>
+                    </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
 
             container.innerHTML = `
                 <div class="fade-in max-w-7xl mx-auto pb-12 w-full">
@@ -1014,7 +1134,7 @@
                         <div class="w-full md:w-2/3">
                             <h2 class="text-4xl font-editorial italic mb-4 text-[#fafafa] block w-full break-words whitespace-normal" contenteditable="true">Media Production</h2>
                             <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-words whitespace-normal min-w-0" contenteditable="true">
-                                This section manages the specific parameters for physical shoots, content capture, and post-production required to generate the omnichannel visual assets.
+                                Link physical shoots and post-production blocks to Strategic Phases to track requirements automatically.
                             </p>
                         </div>
                         <button onclick="window.addProdProject()" class="bg-[#fafafa] text-[#0f0f10] hover:bg-[#d1d5db] font-tech text-[10px] uppercase tracking-widest px-6 py-3 rounded-full transition-colors whitespace-nowrap shadow-lg no-print">
@@ -1034,8 +1154,17 @@
             document.getElementById('newDate').value = '';
             document.getElementById('newTitle').value = '';
             
-            const select = document.getElementById('newMonthSelect');
-            select.innerHTML = window.db.months.filter(m => m.active).map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+            const selectM = document.getElementById('newMonthSelect');
+            selectM.innerHTML = window.db.months.filter(m => m.active).map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+
+            const selectP = document.getElementById('newPhaseSelect');
+            const allPhases = [];
+            window.db.months.forEach(m => {
+                if(m.active) {
+                    m.phases.forEach(p => allPhases.push({ id: p.id, title: p.title, month: m.name }));
+                }
+            });
+            selectP.innerHTML = `<option value="null">-- Unassigned --</option>` + allPhases.map(p => `<option value="${p.id}">${p.title} (${p.month})</option>`).join('');
 
             document.getElementById('addError').classList.add('hidden');
             document.getElementById('addContentModal').classList.remove('hidden');
@@ -1050,6 +1179,7 @@
             const time = document.getElementById('newTime').value.trim() || "TBD";
             const title = document.getElementById('newTitle').value.trim();
             const month = document.getElementById('newMonthSelect').value;
+            const phaseIdRaw = document.getElementById('newPhaseSelect').value;
 
             if(!date || !title) {
                 document.getElementById('addError').classList.remove('hidden');
@@ -1057,7 +1187,9 @@
             }
 
             window.db.calendar.push({
-                m: month, d: date, time: time, t: title,
+                m: month, 
+                phaseId: phaseIdRaw === "null" ? null : parseInt(phaseIdRaw),
+                d: date, time: time, t: title,
                 v: "Add visual directive here...", r: "Add strategic rationale here...", c: "Draft copy here...",
                 plats: platformDefaults()
             });
@@ -1117,6 +1249,14 @@
                 <button onclick="window.updateF('m', '${m}')" class="interactive-btn px-4 py-2.5 rounded-full font-tech text-[10px] uppercase tracking-widest border transition-colors shadow-sm ${state.monthFilter === m ? 'active' : 'bg-[#1a1a1c] text-[#a1a1aa] border-[#3f3f46] hover:border-[#f15e27]'}">${m}</button>
             `).join('');
 
+            // Build select options for phases
+            const allPhases = [];
+            window.db.months.forEach(m => {
+                if(m.active) {
+                    m.phases.forEach(p => allPhases.push({ id: p.id, title: p.title, month: m.name }));
+                }
+            });
+
             const fd = window.db.calendar.map((item, originalIndex) => ({ ...item, originalIndex })).filter(i => {
                 return state.monthFilter === 'All' || i.m === state.monthFilter;
             });
@@ -1126,6 +1266,8 @@
                     const active = i.plats[pk];
                     return `<button onclick="togglePlatform(${i.originalIndex}, '${pk}')" class="text-[9px] font-tech uppercase tracking-widest px-3 py-1.5 rounded transition-colors border ${active ? 'bg-[#f15e27] text-white border-[#f15e27] shadow-md' : 'bg-[#0f0f10] text-[#5e5e63] border-[#3f3f46] hover:border-[#a1a1aa] hover:text-[#fafafa]'}">${platformLabels[pk]}</button>`;
                 }).join('');
+
+                const phaseOptions = allPhases.map(p => `<option value="${p.id}" ${i.phaseId == p.id ? 'selected' : ''}>${p.title} (${p.month})</option>`).join('');
 
                 return `
                 <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-xl p-6 md:p-8 flex flex-col hover:border-[#f15e27] transition-colors relative group break-inside-avoid shadow-sm w-full min-w-0"
@@ -1144,7 +1286,7 @@
                                 <span class="text-[#f15e27] font-tech text-[10px]">&bull;</span> 
                                 <span class="font-tech text-[10px] text-[#a1a1aa] bg-[#0f0f10] border border-[#3f3f46] px-3 py-1.5 rounded whitespace-nowrap min-w-[30px]" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.time', this)">${i.time}</span>
                             </div>
-                            <h4 class="font-editorial italic text-3xl text-[#fafafa] block w-full break-words whitespace-normal border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.t', this)">${i.t}</h4>
+                            <h4 class="font-primary font-bold text-2xl text-[#fafafa] block w-full break-words whitespace-normal border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.t', this)">${i.t}</h4>
                         </div>
                         
                         <div class="flex flex-wrap gap-2 mt-2 w-full">
@@ -1165,7 +1307,15 @@
                     
                     <div class="w-full mt-auto border-t border-[#3f3f46] pt-6 min-w-0">
                         <span class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-2" contenteditable="true">Proposed Copy</span>
-                        <p class="font-primary text-sm leading-relaxed text-[#fafafa] focus-within:outline-none block w-full break-words whitespace-normal border border-transparent focus:border-b-[#f15e27] pl-1 min-w-0" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.c', this)">"${i.c}"</p>
+                        <p class="font-primary text-sm leading-relaxed text-[#fafafa] focus-within:outline-none block w-full break-words whitespace-normal border border-transparent focus:border-b-[#f15e27] pl-1 min-w-0 mb-4" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.c', this)">"${i.c}"</p>
+                        
+                        <div class="pt-4 border-t border-[#3f3f46] no-print">
+                            <span class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest block mb-2">Linked Strategic Phase</span>
+                            <select onchange="updateCalendarPhase(${i.originalIndex}, this.value)" class="w-full bg-[#0f0f10] border border-[#3f3f46] text-[#fafafa] font-primary text-xs px-3 py-2 rounded focus:outline-none focus:border-[#f15e27] transition-colors cursor-pointer">
+                                <option value="null">-- Unassigned --</option>
+                                ${phaseOptions}
+                            </select>
+                        </div>
                     </div>
                 </div>
                 `;
@@ -1179,7 +1329,7 @@
                         <div class="w-full md:w-2/3">
                             <h2 class="text-4xl font-editorial italic mb-4 text-[#fafafa] block w-full break-words whitespace-normal" contenteditable="true">Deliverables Calendar</h2>
                             <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-words whitespace-normal py-2" contenteditable="true">
-                                Review and manipulate the daily content cadence. You can click to edit any text block securely, toggle active platforms using the tags, and drag-and-drop cards to reorder the schedule globally. 
+                                Review and manipulate the daily content cadence. You can link deliverables directly to Strategic Phases using the dropdowns. They will automatically be tagged in the Roadmap. 
                             </p>
                         </div>
                         <button onclick="openAddContentModal()" class="bg-[#fafafa] text-[#0f0f10] hover:bg-[#d1d5db] font-tech text-[10px] uppercase tracking-widest px-6 py-3.5 rounded-full transition-colors whitespace-nowrap shrink-0 shadow-lg border border-transparent focus:outline-none no-print">
