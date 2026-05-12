@@ -426,15 +426,18 @@
             const blob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             
+            const versionName = window.db.exec.docVersion || "default";
+            const filename = `KxN${versionName}.json`;
+            
             const dlAnchorElem = document.createElement('a');
             dlAnchorElem.setAttribute("href", url);
-            dlAnchorElem.setAttribute("download", "nomaro_strategy_state.json");
+            dlAnchorElem.setAttribute("download", filename);
             document.body.appendChild(dlAnchorElem);
             dlAnchorElem.click();
             dlAnchorElem.remove();
             
             URL.revokeObjectURL(url); // Clean up memory
-            showToast('JSON file downloaded');
+            showToast(`JSON file (${filename}) downloaded`);
         };
 
         window.triggerImport = function() {
@@ -712,10 +715,10 @@
                 timelineEvents.push({ date: p.date, type: 'Production', title: p.title });
             });
             
-            const totalDigits = totalPhaseDigits + totalProdDigits;
+            const totalDigits = totalPhaseDigits;
 
-            const chartLabels = [...Object.keys(monthBudgets), 'Media Production'];
-            const chartData = [...Object.values(monthBudgets), totalProdDigits];
+            const chartLabels = [...Object.keys(monthBudgets)];
+            const chartData = [...Object.values(monthBudgets)];
             const isZeroBudget = chartData.reduce((a, b) => a + b, 0) === 0;
 
             const totalLakhs = (totalDigits / 100000).toFixed(2);
@@ -798,7 +801,7 @@
                             
                             <div class="pt-6 border-t border-[#3f3f46] w-full">
                                 <div class="flex flex-row justify-between items-center mb-4 gap-2">
-                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest truncate">Phase-wise</p>
+                                    <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest truncate">Phase-wise Allocation</p>
                                     <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest whitespace-nowrap shrink-0">Total: ${formatINR(totalPhaseDigits)}</p>
                                 </div>
                                 <div class="flex flex-col w-full">
