@@ -11,7 +11,7 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,700&display=swap" rel="stylesheet">
 
     <style>
         :root {
@@ -31,11 +31,12 @@
             margin: 0;
             padding: 0;
             height: 100%;
+            color-scheme: dark;
         }
 
         .font-primary { font-family: 'Plus Jakarta Sans', sans-serif; }
         .font-tech { font-family: 'JetBrains Mono', monospace; }
-        .font-editorial { font-family: 'Instrument Serif', serif; }
+        .font-editorial { font-family: 'Plus Jakarta Sans', sans-serif; } /* Forced to Primary to kill Serif */
 
         .chart-container {
             position: relative;
@@ -101,7 +102,7 @@
             appearance: none;
             background-image: url("data:image/svg+xml;utf8,<svg fill='%235e5e63' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
             background-repeat: no-repeat;
-            background-position-x: 98%;
+            background-position-x: 95%;
             background-position-y: 50%;
         }
 
@@ -120,7 +121,7 @@
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
-            nav, .no-print, #addContentModal, #addMonthModal, #loadModal, #toast {
+            nav, .no-print, #addContentModal, #addMonthModal, #loadModal, #editDateModal, #addProdModal, #editProdDateModal, #toast {
                 display: none !important;
             }
             #main-content {
@@ -197,9 +198,9 @@
 
     <!-- Load Version Modal -->
     <div id="loadModal" class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4 fade-in no-print">
-        <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-xl p-6 md:p-8 max-w-sm w-full text-[#fafafa] relative shadow-2xl">
+        <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-2xl p-6 md:p-8 max-w-sm w-full text-[#fafafa] relative shadow-2xl">
             <button onclick="closeLoadModal()" class="absolute top-5 right-5 text-[#5e5e63] hover:text-[#fafafa] hover:bg-[#f15e27] hover:border-[#f15e27] transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-[#0f0f10] border border-[#3f3f46] text-xl leading-none pb-1">&times;</button>
-            <h3 class="text-2xl font-editorial italic mb-2">Load Strategy Version</h3>
+            <h3 class="text-2xl font-primary font-bold tracking-tight mb-2">Load Strategy Version</h3>
             <p class="text-[10px] font-tech text-[#a1a1aa] mb-6 uppercase tracking-widest border-b border-[#3f3f46] pb-4">Select a saved browser cache</p>
             
             <div id="loadVersionList" class="flex flex-col gap-2 max-h-[40vh] overflow-y-auto pr-2">
@@ -210,70 +211,235 @@
 
     <!-- Add Month Modal -->
     <div id="addMonthModal" class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4 fade-in no-print">
-        <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-xl p-6 md:p-8 max-w-sm w-full text-[#fafafa] relative shadow-2xl">
+        <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-2xl p-6 md:p-8 max-w-sm w-full text-[#fafafa] relative shadow-2xl">
             <button onclick="closeAddMonthModal()" class="absolute top-5 right-5 text-[#5e5e63] hover:text-[#fafafa] hover:bg-[#f15e27] hover:border-[#f15e27] transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-[#0f0f10] border border-[#3f3f46] text-xl leading-none pb-1">&times;</button>
-            <h3 class="text-2xl font-editorial italic mb-2">Add Timeline Month</h3>
-            <p class="text-[10px] font-tech text-[#a1a1aa] mb-6 uppercase tracking-widest border-b border-[#3f3f46] pb-4">Expand the roadmap</p>
+            <h3 class="text-2xl font-primary font-bold tracking-tight mb-2">Enable Timeline Month</h3>
+            <p class="text-[10px] font-tech text-[#a1a1aa] mb-6 uppercase tracking-widest border-b border-[#3f3f46] pb-4">Add to the strategic roadmap</p>
             
             <div class="flex flex-col gap-4">
-                <div>
-                    <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Month & Year *</label>
-                    <input type="text" id="newMonthName" placeholder="e.g. November 2026" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Month *</label>
+                        <select id="newMonthSelectUI" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                            <option value="January">January</option>
+                            <option value="February">February</option>
+                            <option value="March">March</option>
+                            <option value="April">April</option>
+                            <option value="May">May</option>
+                            <option value="June">June</option>
+                            <option value="July">July</option>
+                            <option value="August">August</option>
+                            <option value="September">September</option>
+                            <option value="October">October</option>
+                            <option value="November">November</option>
+                            <option value="December">December</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Year *</label>
+                        <select id="newYearSelectUI" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                            <option value="2026" selected>2026</option>
+                            <option value="2027">2027</option>
+                            <option value="2028">2028</option>
+                            <option value="2029">2029</option>
+                            <option value="2030">2030</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="text-red-500 text-xs hidden" id="addMonthError">Month name is required.</div>
-                <button onclick="saveNewMonth()" class="mt-4 bg-[#f15e27] hover:bg-[#d44c1a] text-white font-tech text-[10px] uppercase tracking-widest py-3.5 rounded-md transition-colors">
+                <button onclick="saveNewMonth()" class="mt-4 bg-[#f15e27] hover:bg-[#d44c1a] text-white font-tech text-[10px] uppercase tracking-widest py-3.5 rounded-xl transition-colors">
                     Add Month
                 </button>
             </div>
         </div>
     </div>
 
+    <!-- Edit Deliverable Date Modal -->
+    <div id="editDateModal" class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4 fade-in no-print">
+        <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-2xl p-6 md:p-8 max-w-sm w-full text-[#fafafa] relative shadow-2xl">
+            <button onclick="closeEditDateModal()" class="absolute top-5 right-5 text-[#5e5e63] hover:text-[#fafafa] hover:bg-[#f15e27] hover:border-[#f15e27] transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-[#0f0f10] border border-[#3f3f46] text-xl leading-none pb-1">&times;</button>
+            <h3 class="text-2xl font-primary font-bold tracking-tight mb-2">Edit Schedule Date</h3>
+            <p class="text-[10px] font-tech text-[#a1a1aa] mb-6 uppercase tracking-widest border-b border-[#3f3f46] pb-4">Update the specific day, month, and year.</p>
+            
+            <input type="hidden" id="editDateIndex" />
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                <div>
+                    <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Day</label>
+                    <select id="editDateDay" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                        <!-- Injected dynamically -->
+                    </select>
+                </div>
+                <div>
+                    <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Month</label>
+                    <select id="editDateMonth" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                        <option value="Jan">Jan</option><option value="Feb">Feb</option><option value="Mar">Mar</option><option value="Apr">Apr</option><option value="May">May</option><option value="Jun">Jun</option><option value="Jul">Jul</option><option value="Aug">Aug</option><option value="Sep">Sep</option><option value="Oct">Oct</option><option value="Nov">Nov</option><option value="Dec">Dec</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Year</label>
+                    <select id="editDateYear" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                        <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button onclick="saveEditedDate()" class="w-full bg-[#f15e27] hover:bg-[#d44c1a] text-white font-tech text-[10px] uppercase tracking-widest py-3.5 rounded-xl transition-colors">
+                Update Date
+            </button>
+        </div>
+    </div>
+
     <!-- Add Content Modal -->
     <div id="addContentModal" class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4 fade-in no-print">
-        <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-xl p-6 md:p-8 max-w-lg w-full text-[#fafafa] relative shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-2xl p-6 md:p-8 max-w-lg w-full text-[#fafafa] relative shadow-2xl max-h-[90vh] overflow-y-auto">
             <button onclick="closeAddContentModal()" class="absolute top-5 right-5 text-[#5e5e63] hover:text-[#fafafa] hover:bg-[#f15e27] hover:border-[#f15e27] transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-[#0f0f10] border border-[#3f3f46] text-xl leading-none pb-1">&times;</button>
-            <h3 class="text-2xl font-editorial italic mb-2">Schedule Deliverable</h3>
+            <h3 class="text-2xl font-primary font-bold tracking-tight mb-2">Schedule Deliverable</h3>
             <p class="text-[10px] font-tech text-[#a1a1aa] mb-6 uppercase tracking-widest border-b border-[#3f3f46] pb-4">Add to Daily Calendar</p>
             
             <div class="flex flex-col gap-4">
-                <div>
-                    <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Date *</label>
-                    <input type="text" id="newDate" placeholder="e.g. May 12" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Day *</label>
+                        <select id="newDateDay" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                            <!-- Injected dynamically -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Month *</label>
+                        <select id="newDateMonth" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                            <option value="Jan">Jan</option><option value="Feb">Feb</option><option value="Mar">Mar</option><option value="Apr">Apr</option><option value="May" selected>May</option><option value="Jun">Jun</option><option value="Jul">Jul</option><option value="Aug">Aug</option><option value="Sep">Sep</option><option value="Oct">Oct</option><option value="Nov">Nov</option><option value="Dec">Dec</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Year *</label>
+                        <select id="newDateYear" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                            <option value="2024">2024</option><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
+                        </select>
+                    </div>
                 </div>
                 <div>
                     <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Time</label>
-                    <input type="text" id="newTime" placeholder="e.g. 10:00 AM IST" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
+                    <input type="text" id="newTime" placeholder="e.g. 10:00 AM IST" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
                 </div>
                 <div>
                     <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Content Title / Theme *</label>
-                    <input type="text" id="newTitle" placeholder="e.g. Feature Highlight" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
+                    <input type="text" id="newTitle" placeholder="e.g. Feature Highlight" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest block mb-1">Month Category</label>
-                        <select id="newMonthSelect" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
-                            <!-- Injected dynamically -->
-                        </select>
-                    </div>
-                    <div>
-                        <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Link to Phase</label>
-                        <select id="newPhaseSelect" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
-                            <!-- Injected dynamically -->
-                        </select>
-                    </div>
+                <div>
+                    <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Link to Phase (Optional)</label>
+                    <select id="newPhaseSelect" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                        <!-- Injected dynamically -->
+                    </select>
                 </div>
                 
-                <div class="text-red-500 text-xs hidden" id="addError">Date and Content Title are mandatory.</div>
-                <button onclick="saveNewContent()" class="mt-4 bg-[#f15e27] hover:bg-[#d44c1a] text-white font-tech text-[10px] uppercase tracking-widest py-3.5 rounded-md transition-colors">
+                <div class="text-red-500 text-xs hidden" id="addError">Content Title is mandatory.</div>
+                <button onclick="saveNewContent()" class="mt-4 bg-[#f15e27] hover:bg-[#d44c1a] text-white font-tech text-[10px] uppercase tracking-widest py-3.5 rounded-xl transition-colors">
                     Create Content Card
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Notification Toast -->
-    <div id="toast" class="fixed bottom-6 right-6 bg-[#fafafa] text-[#0f0f10] px-6 py-3 rounded-md shadow-2xl font-tech text-xs tracking-widest uppercase transition-opacity duration-300 opacity-0 pointer-events-none z-[200]">
-        Notification
+    <!-- Add Production Modal -->
+    <div id="addProdModal" class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4 fade-in no-print">
+        <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-2xl p-6 md:p-8 max-w-lg w-full text-[#fafafa] relative shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button onclick="closeAddProdModal()" class="absolute top-5 right-5 text-[#5e5e63] hover:text-[#fafafa] hover:bg-[#f15e27] hover:border-[#f15e27] transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-[#0f0f10] border border-[#3f3f46] text-xl leading-none pb-1">&times;</button>
+            <h3 class="text-2xl font-primary font-bold tracking-tight mb-2">Schedule Production Project</h3>
+            <p class="text-[10px] font-tech text-[#a1a1aa] mb-6 uppercase tracking-widest border-b border-[#3f3f46] pb-4">Add new physical shoot or post-production block</p>
+            
+            <div class="flex flex-col gap-4">
+                <div>
+                    <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Project Title *</label>
+                    <input type="text" id="newProdTitle" placeholder="e.g. Campaign Storyboarding" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Category</label>
+                        <input type="text" id="newProdCat" value="Pre-Production" placeholder="e.g. Physical Shoot" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa]">
+                    </div>
+                    <div>
+                        <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Link to Phase</label>
+                        <select id="newProdPhaseSelect" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                            <!-- Injected dynamically -->
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Start Date *</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <select id="newProdStartDay" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer"></select>
+                        <select id="newProdStartMonth" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                            <option value="Jan">Jan</option><option value="Feb">Feb</option><option value="Mar">Mar</option><option value="Apr" selected>Apr</option><option value="May">May</option><option value="Jun">Jun</option><option value="Jul">Jul</option><option value="Aug">Aug</option><option value="Sep">Sep</option><option value="Oct">Oct</option><option value="Nov">Nov</option><option value="Dec">Dec</option>
+                        </select>
+                        <select id="newProdStartYear" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                            <option value="2024">2024</option><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">End Date *</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <select id="newProdEndDay" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer"></select>
+                        <select id="newProdEndMonth" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                            <option value="Jan">Jan</option><option value="Feb">Feb</option><option value="Mar">Mar</option><option value="Apr" selected>Apr</option><option value="May">May</option><option value="Jun">Jun</option><option value="Jul">Jul</option><option value="Aug">Aug</option><option value="Sep">Sep</option><option value="Oct">Oct</option><option value="Nov">Nov</option><option value="Dec">Dec</option>
+                        </select>
+                        <select id="newProdEndYear" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                            <option value="2024">2024</option><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="text-red-500 text-xs hidden" id="addProdError">Project Title is mandatory.</div>
+                <button onclick="saveNewProd()" class="mt-4 bg-[#f15e27] hover:bg-[#d44c1a] text-white font-tech text-[10px] uppercase tracking-widest py-3.5 rounded-xl transition-colors">
+                    Create Project
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Production Date Modal -->
+    <div id="editProdDateModal" class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4 fade-in no-print">
+        <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-2xl p-6 md:p-8 max-w-sm w-full text-[#fafafa] relative shadow-2xl">
+            <button onclick="closeEditProdDateModal()" class="absolute top-5 right-5 text-[#5e5e63] hover:text-[#fafafa] hover:bg-[#f15e27] hover:border-[#f15e27] transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-[#0f0f10] border border-[#3f3f46] text-xl leading-none pb-1">&times;</button>
+            <h3 class="text-2xl font-primary font-bold tracking-tight mb-2">Edit Timeline</h3>
+            <p class="text-[10px] font-tech text-[#a1a1aa] mb-6 uppercase tracking-widest border-b border-[#3f3f46] pb-4">Update the production start and end dates.</p>
+            
+            <input type="hidden" id="editProdDateIndex" />
+            <div class="flex flex-col gap-6 mb-6">
+                <div>
+                    <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">Start Date</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <select id="editProdStartDay" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer"></select>
+                        <select id="editProdStartMonth" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                            <option value="Jan">Jan</option><option value="Feb">Feb</option><option value="Mar">Mar</option><option value="Apr">Apr</option><option value="May">May</option><option value="Jun">Jun</option><option value="Jul">Jul</option><option value="Aug">Aug</option><option value="Sep">Sep</option><option value="Oct">Oct</option><option value="Nov">Nov</option><option value="Dec">Dec</option>
+                        </select>
+                        <select id="editProdStartYear" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                            <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-1">End Date</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <select id="editProdEndDay" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer"></select>
+                        <select id="editProdEndMonth" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                            <option value="Jan">Jan</option><option value="Feb">Feb</option><option value="Mar">Mar</option><option value="Apr">Apr</option><option value="May">May</option><option value="Jun">Jun</option><option value="Jul">Jul</option><option value="Aug">Aug</option><option value="Sep">Sep</option><option value="Oct">Oct</option><option value="Nov">Nov</option><option value="Dec">Dec</option>
+                        </select>
+                        <select id="editProdEndYear" class="w-full bg-[#0f0f10] border border-[#3f3f46] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-[#f15e27] text-[#fafafa] cursor-pointer">
+                            <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <button onclick="saveEditedProdDate()" class="w-full bg-[#f15e27] hover:bg-[#d44c1a] text-white font-tech text-[10px] uppercase tracking-widest py-3.5 rounded-xl transition-colors">
+                Update Timeline
+            </button>
+        </div>
     </div>
 
     <script>
@@ -291,6 +457,18 @@
             }
         });
 
+        // Initialize dynamic Day options for forms
+        function populateDays() {
+            const daysHtml = Array.from({length: 31}, (_, i) => {
+                const d = (i + 1).toString().padStart(2, '0');
+                return `<option value="${d}">${d}</option>`;
+            }).join('');
+            ['newDateDay', 'editDateDay', 'newProdStartDay', 'newProdEndDay', 'editProdStartDay', 'editProdEndDay'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.innerHTML = daysHtml;
+            });
+        }
+
         // --- 1. UTILITIES & GLOBALLY EDITABLE DATA BINDING ---
         function parseFullDigits(str) {
             let numStr = str.toString().replace(/[^0-9]/g, '');
@@ -303,6 +481,7 @@
 
         function showToast(message) {
             const toast = document.getElementById('toast');
+            if(!toast) return;
             toast.innerText = message;
             toast.classList.remove('opacity-0');
             setTimeout(() => {
@@ -311,6 +490,7 @@
         }
 
         window.updateDB = function(path, element) {
+            if(!element) return;
             const value = element.innerText.trim();
             const parts = path.split('.');
             let obj = window.db;
@@ -322,6 +502,7 @@
         };
 
         window.updateBudget = function(mIndex, pIndex, el) {
+            if(!el) return;
             let val = parseFullDigits(el.innerText);
             window.db.months[mIndex].phases[pIndex].budget = val;
             autoSave();
@@ -329,6 +510,7 @@
         };
 
         window.updateProdBudget = function(i, el) {
+            if(!el) return;
             let val = parseFullDigits(el.innerText);
             window.db.production[i].budget = val;
             autoSave();
@@ -338,13 +520,13 @@
         window.updateCalendarPhase = function(index, val) {
             window.db.calendar[index].phaseId = val === "null" ? null : parseInt(val);
             autoSave();
-            navigate(state.view); // Triggers re-render across views
+            navigate(state.view); 
         };
 
         window.updateProductionPhase = function(index, val) {
             window.db.production[index].phaseId = val === "null" ? null : parseInt(val);
             autoSave();
-            navigate(state.view); // Triggers re-render across views
+            navigate(state.view); 
         };
 
         // --- 1B. FILE SYSTEM SAVE / LOAD LOGIC ---
@@ -365,7 +547,6 @@
             }
         };
 
-        // Local Storage specific save
         window.saveVersion = function() {
             const vName = prompt("Enter a name for this strategy version:");
             if(!vName) return;
@@ -379,6 +560,7 @@
             let versions = JSON.parse(localStorage.getItem('nomaro_versions') || '{}');
             const keys = Object.keys(versions);
             const list = document.getElementById('loadVersionList');
+            if(!list) return;
             
             if(keys.length === 0) {
                 list.innerHTML = '<p class="text-sm font-primary text-[#5e5e63] italic">No saved custom versions found.</p>';
@@ -393,11 +575,13 @@
                     </div>
                 `).join('');
             }
-            document.getElementById('loadModal').classList.remove('hidden');
+            const modal = document.getElementById('loadModal');
+            if(modal) modal.classList.remove('hidden');
         }
 
         window.closeLoadModal = function() {
-            document.getElementById('loadModal').classList.add('hidden');
+            const modal = document.getElementById('loadModal');
+            if(modal) modal.classList.add('hidden');
         }
 
         window.loadSpecificVersion = function(k) {
@@ -420,7 +604,6 @@
             openLoadModal(); 
         }
 
-        // External JSON file Export/Import
         window.exportData = function() {
             const dataStr = JSON.stringify(window.db, null, 2);
             const blob = new Blob([dataStr], { type: "application/json" });
@@ -436,17 +619,18 @@
             dlAnchorElem.click();
             dlAnchorElem.remove();
             
-            URL.revokeObjectURL(url); // Clean up memory
+            URL.revokeObjectURL(url);
             showToast(`JSON file (${filename}) downloaded`);
         };
 
         window.triggerImport = function() {
-            document.getElementById('importFile').click();
+            const fileInput = document.getElementById('importFile');
+            if(fileInput) fileInput.click();
         };
 
         window.importData = function(event) {
             const file = event.target.files[0];
-            event.target.value = ''; // Reset input to allow re-upload of same file
+            event.target.value = ''; 
             if (!file) return;
             
             const reader = new FileReader();
@@ -495,11 +679,28 @@
                 dataObj.production.forEach(p => {
                     if (p.budget >= 1000) { p.budget = p.budget / 100000; }
                     if (typeof p.phaseId === 'undefined') p.phaseId = null;
+                    if (p.date && !p.startDate) {
+                        p.startDate = p.date;
+                        p.endDate = p.date;
+                    }
+                    if(!p.startDate) p.startDate = "Apr 20, 2026";
+                    if(!p.endDate) p.endDate = "Apr 25, 2026";
                 });
             }
             if(dataObj.calendar) {
                 dataObj.calendar.forEach(c => {
                     if(typeof c.phaseId === 'undefined') c.phaseId = null;
+                    
+                    if(c.d && !c.d.includes(',')) {
+                        const parts = c.d.replace(',', '').split(' ');
+                        if(parts.length >= 2) {
+                            const m = parts[0].substring(0,3);
+                            const d = parts[1].padStart(2, '0');
+                            let y = "2026";
+                            if(parts.length >= 3) y = parts[2];
+                            c.d = `${m} ${d}, ${y}`;
+                        }
+                    }
                 });
             }
             return dataObj;
@@ -516,7 +717,6 @@
             const main = document.getElementById('main-content');
             const printContainer = document.getElementById('print-container');
             
-            // Swap visibility
             main.style.display = 'none';
             printContainer.classList.remove('hidden');
             printContainer.innerHTML = '';
@@ -537,7 +737,7 @@
 
             renderExec(v1);
             
-            v2.innerHTML = '<h2 class="text-5xl font-editorial italic mb-8 text-[#fafafa] w-full border-b border-[#3f3f46] pb-4">Master Strategic Roadmap</h2>';
+            v2.innerHTML = '<h2 class="text-4xl md:text-5xl font-primary font-bold tracking-tight mb-8 text-[#fafafa] w-full border-b border-[#3f3f46] pb-4">Master Strategic Roadmap</h2>';
             window.db.months.filter(m => m.active).forEach(m => {
                 const mDiv = document.createElement('div');
                 mDiv.className = 'mb-12 break-inside-avoid';
@@ -558,7 +758,6 @@
             renderProduction(v3);
             renderContent(v4);
             
-            // Hide all remaining no-print elements and dropdowns in the print layout
             printContainer.querySelectorAll('.no-print, button:not(.nav-btn), select').forEach(el => {
                 el.style.display = 'none';
             });
@@ -569,7 +768,6 @@
             setTimeout(() => {
                 window.print();
                 
-                // Restore original state
                 printContainer.innerHTML = '';
                 printContainer.classList.add('hidden');
                 main.style.display = '';
@@ -614,10 +812,10 @@
                 }
             ],
             production: [
-                { id: 1, cat: "Pre-Production", phaseId: 101, title: "Campaign Storyboarding", desc: "Develop shot lists, scout urban commute locations, and lock in talent for the primary brand anthem video.", date: "April 20-25, 2026", budget: 0 }
+                { id: 1, cat: "Pre-Production", phaseId: 101, title: "Campaign Storyboarding", desc: "Develop shot lists, scout urban commute locations, and lock in talent for the primary brand anthem video.", startDate: "Apr 20, 2026", endDate: "Apr 25, 2026", budget: 0 }
             ],
             calendar: [
-                { m: "May 2026", phaseId: 101, d: "May 1", time: "09:00 AM IST", t: "The Manifesto Drop", v: "High-contrast text graphic outlining the brand mission statement over a blurred urban landscape.", r: "Establishes the core brand 'why' before introducing any product visuals to capture high-intent early adopters.", c: "We didn't set out to make another bag. We set out to make a companion. Read our manifesto at the link in bio.", plats: { ...platformDefaults(), instagram: true, email: true } }
+                { m: "May 2026", phaseId: 101, d: "May 01, 2026", time: "09:00 AM IST", t: "The Manifesto Drop", v: "High-contrast text graphic outlining the brand mission statement over a blurred urban landscape.", r: "Establishes the core brand 'why' before introducing any product visuals to capture high-intent early adopters.", c: "We didn't set out to make another bag. We set out to make a companion. Read our manifesto at the link in bio.", plats: { ...platformDefaults(), instagram: true, email: true } }
             ]
         };
 
@@ -651,6 +849,7 @@
 
         // --- 4. CORE LOGIC & RENDERING ---
         window.onload = () => {
+            populateDays();
             if(!state.monthId) state.monthId = getDefaultMonthId();
             renderNav();
             navigate('exec');
@@ -661,6 +860,7 @@
 
         function renderNav() {
             const container = document.getElementById('nav-container');
+            if(!container) return;
             container.innerHTML = '';
             navConfig.forEach(item => {
                 const btn = document.createElement('button');
@@ -675,6 +875,7 @@
             state.view = viewId;
             renderNav();
             const main = document.getElementById('main-content');
+            if(!main) return;
             main.innerHTML = '';
             
             if (chart1Instance) { chart1Instance.destroy(); chart1Instance = null; }
@@ -712,7 +913,7 @@
             window.db.production.forEach(p => {
                 const b = parseInt(p.budget) || 0;
                 totalProdDigits += b;
-                timelineEvents.push({ date: p.date, type: 'Production', title: p.title });
+                timelineEvents.push({ date: p.startDate, type: 'Production', title: p.title });
             });
             
             const totalDigits = totalPhaseDigits;
@@ -748,10 +949,10 @@
             container.innerHTML = `
                 <div class="fade-in max-w-6xl mx-auto pb-12 w-full">
                     <div class="mb-10 w-full">
-                        <h2 class="text-5xl md:text-7xl font-editorial italic mb-6 text-[#fafafa] tracking-tight block w-full break-words whitespace-normal">Project Overview</h2>
+                        <h2 class="text-4xl md:text-6xl font-primary font-bold tracking-tight mb-6 text-[#fafafa] block w-full break-words whitespace-normal">Project Overview</h2>
                         <div class="py-2 w-full">
                             <h3 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mb-2 block">Project Description</h3>
-                            <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-words whitespace-normal border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('exec.summary', this)">
+                            <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-words whitespace-normal border border-transparent focus:border-b-[#f15e27] outline-none transition-colors" contenteditable="true" onblur="updateDB('exec.summary', this)">
                                 ${window.db.exec.summary}
                             </p>
                         </div>
@@ -759,40 +960,40 @@
 
                     <!-- Strategy Blocks -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 w-full items-start">
-                        <div class="bg-[#1a1a1c] p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full h-full min-w-0 avoid-break break-inside-avoid">
+                        <div class="bg-[#1a1a1c] p-6 md:p-8 rounded-2xl border border-[#3f3f46] flex flex-col w-full h-full min-w-0 avoid-break break-inside-avoid shadow-sm">
                             <h3 class="text-sm font-tech text-[#f15e27] uppercase tracking-widest block mb-6 w-full break-words whitespace-normal">Brand Positioning Strategy</h3>
                             
                             <div class="mb-6">
                                 <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest mb-2">Core Positioning</p>
-                                <p class="font-primary text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27] min-w-0 block w-full break-words whitespace-normal" contenteditable="true" onblur="updateDB('exec.brandPositioning.core', this)">${window.db.exec.brandPositioning.core}</p>
+                                <p class="font-primary text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27] min-w-0 block w-full break-words whitespace-normal outline-none transition-colors" contenteditable="true" onblur="updateDB('exec.brandPositioning.core', this)">${window.db.exec.brandPositioning.core}</p>
                             </div>
                             <div class="mb-6">
                                 <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest mb-2">Emotional Territory</p>
-                                <p class="font-primary text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27] min-w-0 block w-full break-words whitespace-normal" contenteditable="true" onblur="updateDB('exec.brandPositioning.emotional', this)">${window.db.exec.brandPositioning.emotional}</p>
+                                <p class="font-primary text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27] min-w-0 block w-full break-words whitespace-normal outline-none transition-colors" contenteditable="true" onblur="updateDB('exec.brandPositioning.emotional', this)">${window.db.exec.brandPositioning.emotional}</p>
                             </div>
                             <div>
                                 <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest mb-2">Brand Personality</p>
-                                <p class="font-primary text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27] min-w-0 block w-full break-words whitespace-normal" contenteditable="true" onblur="updateDB('exec.brandPositioning.personality', this)">${window.db.exec.brandPositioning.personality}</p>
+                                <p class="font-primary text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27] min-w-0 block w-full break-words whitespace-normal outline-none transition-colors" contenteditable="true" onblur="updateDB('exec.brandPositioning.personality', this)">${window.db.exec.brandPositioning.personality}</p>
                             </div>
                         </div>
 
-                        <div class="bg-[#1a1a1c] p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full h-full min-w-0 avoid-break break-inside-avoid">
+                        <div class="bg-[#1a1a1c] p-6 md:p-8 rounded-2xl border border-[#3f3f46] flex flex-col w-full h-full min-w-0 avoid-break break-inside-avoid shadow-sm">
                             <h3 class="text-sm font-tech text-[#f15e27] uppercase tracking-widest block mb-6 w-full break-words whitespace-normal">Target Audience Strategy</h3>
                             
                             <div class="mb-6">
                                 <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest mb-2">Primary Audience</p>
-                                <p class="font-primary text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27] min-w-0 block w-full break-words whitespace-normal" contenteditable="true" onblur="updateDB('exec.targetAudience.primary', this)">${window.db.exec.targetAudience.primary}</p>
+                                <p class="font-primary text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27] min-w-0 block w-full break-words whitespace-normal outline-none transition-colors" contenteditable="true" onblur="updateDB('exec.targetAudience.primary', this)">${window.db.exec.targetAudience.primary}</p>
                             </div>
                             <div>
                                 <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest mb-2">Secondary Audience</p>
-                                <p class="font-primary text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27] min-w-0 block w-full break-words whitespace-normal" contenteditable="true" onblur="updateDB('exec.targetAudience.secondary', this)">${window.db.exec.targetAudience.secondary}</p>
+                                <p class="font-primary text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27] min-w-0 block w-full break-words whitespace-normal outline-none transition-colors" contenteditable="true" onblur="updateDB('exec.targetAudience.secondary', this)">${window.db.exec.targetAudience.secondary}</p>
                             </div>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8 w-full items-start">
                         <!-- Left Col: Budgets -->
-                        <div class="lg:col-span-5 flex flex-col w-full bg-[#1a1a1c] p-4 sm:p-6 md:p-8 rounded-xl border border-[#3f3f46] avoid-break break-inside-avoid">
+                        <div class="lg:col-span-5 flex flex-col w-full bg-[#1a1a1c] p-6 md:p-8 rounded-2xl border border-[#3f3f46] avoid-break break-inside-avoid shadow-sm">
                             <div class="w-full">
                                 <p class="text-[10px] font-tech text-[#5e5e63] uppercase tracking-widest mb-2 block">Total Capital Allocation</p>
                                 <p class="text-4xl font-primary font-bold text-[#fafafa] mb-1 block w-full truncate">${formatINR(totalDigits)}</p>
@@ -813,14 +1014,14 @@
                         <!-- Right Col: Charts & Master Timeline -->
                         <div class="lg:col-span-7 flex flex-col gap-8 w-full min-w-0">
                             
-                            <div class="bg-[#1a1a1c] p-4 sm:p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full avoid-break break-inside-avoid min-w-0">
+                            <div class="bg-[#1a1a1c] p-6 md:p-8 rounded-2xl border border-[#3f3f46] flex flex-col w-full avoid-break break-inside-avoid min-w-0 shadow-sm">
                                 <h3 class="text-sm font-primary font-bold block mb-4 w-full whitespace-nowrap truncate sm:whitespace-normal sm:overflow-visible">Capital Distribution by Month</h3>
                                 <div class="chart-container w-full flex-grow relative min-h-[250px]">
                                     <canvas id="${chartId}"></canvas>
                                 </div>
                             </div>
 
-                            <div class="bg-[#1a1a1c] p-4 sm:p-6 md:p-8 rounded-xl border border-[#3f3f46] flex flex-col w-full avoid-break break-inside-avoid min-w-0">
+                            <div class="bg-[#1a1a1c] p-6 md:p-8 rounded-2xl border border-[#3f3f46] flex flex-col w-full avoid-break break-inside-avoid min-w-0 shadow-sm">
                                 <h3 class="text-sm font-primary font-bold block mb-6 w-full">Strategic Timeline</h3>
                                 <div class="flex flex-col w-full">
                                     ${masterTimelineHtml || `<p class="text-sm text-[#5e5e63] italic w-full">No timeline events generated.</p>`}
@@ -884,31 +1085,39 @@
         }
 
         window.openAddMonthModal = function() {
-            document.getElementById('newMonthName').value = '';
-            document.getElementById('addMonthError').classList.add('hidden');
-            document.getElementById('addMonthModal').classList.remove('hidden');
+            const m = document.getElementById('addMonthModal');
+            if(m) m.classList.remove('hidden');
         };
 
         window.closeAddMonthModal = function() {
-            document.getElementById('addMonthModal').classList.add('hidden');
+            const m = document.getElementById('addMonthModal');
+            if(m) m.classList.add('hidden');
         };
 
         window.saveNewMonth = function() {
-            const monthName = document.getElementById('newMonthName').value.trim();
-            if(!monthName) {
-                document.getElementById('addMonthError').classList.remove('hidden');
-                return;
+            const mSelect = document.getElementById('newMonthSelectUI');
+            const ySelect = document.getElementById('newYearSelectUI');
+            if(!mSelect || !ySelect) return;
+            
+            const monthName = `${mSelect.value} ${ySelect.value}`;
+            let existing = window.db.months.find(x => x.name.toLowerCase() === monthName.toLowerCase());
+            
+            if (existing) {
+                existing.active = true;
+                state.monthId = existing.id;
+            } else {
+                const newId = Date.now();
+                window.db.months.push({
+                    id: newId,
+                    name: monthName,
+                    active: true,
+                    phases: []
+                });
+                
+                window.db.months.sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
+                state.monthId = newId;
             }
-
-            const newId = Date.now();
-            window.db.months.push({
-                id: newId,
-                name: monthName,
-                active: true,
-                phases: []
-            });
-
-            state.monthId = newId;
+            
             closeAddMonthModal();
             autoSave();
             navigate(state.view);
@@ -950,15 +1159,15 @@
             
             // Month Toggles
             const monthToggles = window.db.months.map(m => `
-                <button onclick="window.toggleMonth(${m.id})" class="px-4 py-2 text-[10px] font-tech uppercase tracking-widest border rounded-full transition-colors ${m.active ? 'bg-[#f15e27] border-[#f15e27] text-[#fafafa]' : 'bg-[#0f0f10] border-[#3f3f46] text-[#5e5e63] hover:border-[#a1a1aa]'}">
-                    ${m.name} ${m.active ? '✓' : ''}
+                <button onclick="window.toggleMonth(${m.id})" class="px-4 py-2 text-[10px] font-tech uppercase tracking-widest rounded-full transition-all border ${m.active ? 'bg-[#fafafa] text-[#0f0f10] border-[#fafafa] shadow-md font-bold' : 'bg-[#0f0f10] text-[#a1a1aa] border-[#3f3f46] hover:border-[#a1a1aa]'}">
+                    ${m.name} ${m.active ? '' : '<span class="opacity-50 ml-1 text-[8px]">(Hidden)</span>'}
                 </button>
             `).join('');
 
             // Active Month Tabs
             const tabs = window.db.months.filter(m => m.active).map((m, i) => `
                 <button onclick="window.updateP(${m.id})" class="interactive-btn flex-1 p-3 rounded-lg border border-[#3f3f46] text-center text-sm font-primary font-bold transition-all ${state.monthId === m.id ? 'active shadow-lg' : 'bg-[#1a1a1c] text-[#a1a1aa] hover:border-[#f15e27]'}">
-                    <span class="block font-primary text-sm break-words whitespace-normal leading-relaxed" contenteditable="true" onblur="updateDB('months.${window.db.months.indexOf(m)}.name', this)">${m.name}</span>
+                    <span class="block font-primary text-sm break-normal whitespace-normal leading-relaxed outline-none" contenteditable="true" onblur="updateDB('months.${window.db.months.indexOf(m)}.name', this)">${m.name}</span>
                 </button>
             `).join('');
 
@@ -966,33 +1175,36 @@
                 const kpis = p.kpis.map((k, i) => `
                     <li class="flex items-start gap-3 w-full group/item">
                         <span class="text-[#f15e27] font-tech mt-0.5 shrink-0">-</span>
-                        <span contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.kpis.${i}', this)" class="flex-grow block w-full break-words whitespace-normal min-w-0 text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27]">${k}</span>
+                        <span contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.kpis.${i}', this)" class="flex-grow block w-full break-normal whitespace-normal min-w-0 text-sm text-[#fafafa] leading-relaxed border border-transparent focus:border-b-[#f15e27] outline-none transition-colors">${k}</span>
                     </li>
                 `).join('');
 
                 const acts = (p.actions || []).map((a, i) => `
-                    <div class="relative group/action w-full border-l border-[#3f3f46] pl-4 py-2 hover:border-[#f15e27] transition-colors bg-[#0f0f10] p-4 rounded-r-lg">
-                        <button onclick="window.deleteAction(${mIndex}, ${pIndex}, ${i})" class="absolute top-2 right-2 text-[#5e5e63] hover:text-red-500 md:opacity-0 group-hover/action:opacity-100 transition-opacity text-xl font-bold leading-none w-6 h-6 rounded flex justify-center items-center pb-1 no-print">&times;</button>
-                        <span class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-2 max-w-[85%] min-w-0 break-words border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.actions.${i}.tag', this)">${a.tag}</span>
-                        <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-words min-w-0 border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.actions.${i}.text', this)">${a.text}</p>
+                    <div class="relative group/action w-full border-l border-[#3f3f46] pl-4 py-2 hover:border-[#f15e27] transition-colors bg-[#0f0f10] p-4 rounded-r-lg mt-3 shadow-inner">
+                        <button onclick="window.deleteAction(${mIndex}, ${pIndex}, ${i})" class="absolute top-3 right-3 text-[#5e5e63] hover:text-red-500 md:opacity-0 group-hover/action:opacity-100 transition-opacity text-lg font-bold leading-none w-6 h-6 rounded-full bg-[#1a1a1c] border border-[#3f3f46] flex justify-center items-center pb-1 no-print shadow-sm">&times;</button>
+                        <span class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-2 max-w-[85%] min-w-0 break-normal whitespace-normal border border-transparent focus:border-b-[#f15e27] outline-none transition-colors" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.actions.${i}.tag', this)">${a.tag}</span>
+                        <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-normal whitespace-normal min-w-0 border border-transparent focus:border-b-[#f15e27] outline-none transition-colors" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.actions.${i}.text', this)">${a.text}</p>
                     </div>
                 `).join('');
                 
-                // Fetch dynamically linked data
-                const linkedDels = window.db.calendar.filter(c => c.phaseId === p.id).map((c) => `<span class="inline-block border border-[#f15e27] text-[#f15e27] bg-[#f15e27] bg-opacity-10 text-xs font-primary px-3 py-1.5 rounded-full m-1 min-w-0 break-words whitespace-normal" title="Linked from Calendar">${c.t}</span>`).join('');
-                const linkedProds = window.db.production.filter(pr => pr.phaseId === p.id).map((pr) => `<span class="inline-block border border-[#a1a1aa] text-[#fafafa] bg-[#3f3f46] bg-opacity-50 text-xs font-primary px-3 py-1.5 rounded-full m-1 min-w-0 break-words whitespace-normal" title="Linked from Production">${pr.title}</span>`).join('');
+                const linkedDels = window.db.calendar.filter(c => c.phaseId === p.id).map((c) => `<span class="inline-block border border-[#f15e27] text-[#f15e27] bg-[#f15e27] bg-opacity-10 text-xs font-primary px-3 py-1.5 rounded-full m-1 min-w-0 break-normal whitespace-normal" title="Linked from Calendar">${c.t}</span>`).join('');
+                const linkedProds = window.db.production.filter(pr => pr.phaseId === p.id).map((pr) => `<span class="inline-block border border-[#a1a1aa] text-[#fafafa] bg-[#3f3f46] bg-opacity-50 text-xs font-primary px-3 py-1.5 rounded-full m-1 min-w-0 break-normal whitespace-normal" title="Linked from Production">${pr.title}</span>`).join('');
 
                 return `
-                <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-2xl overflow-hidden fade-in relative w-full shadow-sm mb-12 last:mb-0 break-inside-avoid">
+                <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-2xl overflow-hidden fade-in relative group break-inside-avoid shadow-lg hover:border-[#5e5e63] transition-all w-full mb-12 last:mb-0">
                     
-                    <div class="p-6 md:p-8 border-b border-[#3f3f46] flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pr-16 bg-[#0f0f10]">
-                        <button onclick="window.deletePhase(${mIndex}, ${pIndex})" class="absolute top-6 right-6 text-[#5e5e63] hover:text-red-500 transition-colors text-xl font-bold leading-none w-8 h-8 rounded-full flex justify-center items-center pb-1 z-10 no-print" title="Delete Phase">&times;</button>
-                        <div class="w-full md:w-auto flex-grow min-w-0">
-                            <h3 class="text-2xl font-primary font-bold text-[#fafafa] block w-full break-words whitespace-normal min-w-0 border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.title', this)">${p.title}</h3>
-                        </div>
-                        <div class="bg-[#1a1a1c] border border-[#3f3f46] px-4 py-2 rounded-lg w-full md:w-auto flex items-center gap-3 shrink-0">
-                            <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest shrink-0">Capital (INR):</p>
-                            <p class="text-lg font-tech font-bold text-[#fafafa] min-w-[30px] border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateBudget(${mIndex}, ${pIndex}, this)">${formatINR(p.budget).replace('₹', '').trim()}</p>
+                    <!-- Global Card Actions -->
+                    <div class="absolute top-4 right-4 flex items-center gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity z-20 no-print">
+                        <button onclick="window.deletePhase(${mIndex}, ${pIndex})" class="text-[#5e5e63] hover:text-red-500 bg-[#0f0f10] border border-[#3f3f46] rounded-full w-8 h-8 flex items-center justify-center transition-colors shadow-sm" title="Delete Phase">&times;</button>
+                    </div>
+
+                    <div class="p-5 sm:p-6 md:p-8 border-b border-[#3f3f46] flex flex-col md:flex-row justify-between items-start w-full bg-[#0f0f10]">
+                        <div class="flex flex-col gap-3 min-w-0 flex-grow w-full pr-8">
+                            <h3 class="text-3xl sm:text-4xl font-primary font-bold text-[#fafafa] block w-full break-normal whitespace-normal min-w-0 border-b border-transparent focus:border-b-[#f15e27] outline-none transition-colors leading-tight" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.title', this)">${p.title}</h3>
+                            <div class="bg-[#1a1a1c] border border-[#3f3f46] px-4 py-2.5 rounded-xl flex items-center w-fit max-w-full gap-3 shrink-0 shadow-inner mt-2">
+                                <p class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest shrink-0 hidden sm:block">Capital (INR):</p>
+                                <p class="text-lg sm:text-xl font-tech font-bold text-[#fafafa] min-w-[30px] border-b border-transparent focus:border-b-[#f15e27] outline-none transition-colors truncate" contenteditable="true" onblur="updateBudget(${mIndex}, ${pIndex}, this)">${formatINR(p.budget).replace('₹', '').trim()}</p>
+                            </div>
                         </div>
                     </div>
                     
@@ -1000,19 +1212,22 @@
                         <div class="w-full min-w-0">
                             <div class="flex justify-between items-center mb-2">
                                 <h4 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63]">Strategic Actions</h4>
-                                <button onclick="window.addAction(${mIndex}, ${pIndex})" class="text-[#f15e27] hover:text-[#fafafa] font-tech text-[10px] uppercase tracking-widest transition-colors border border-[#3f3f46] px-2 py-1 rounded bg-[#0f0f10] no-print">+ Add</button>
+                                <button onclick="window.addAction(${mIndex}, ${pIndex})" class="flex items-center gap-1 text-[#f15e27] hover:text-[#fafafa] font-tech text-[10px] uppercase tracking-widest transition-colors border border-[#3f3f46] px-3 py-1.5 rounded-lg bg-[#0f0f10] no-print shadow-sm">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                    Add
+                                </button>
                             </div>
-                            <div class="flex flex-col gap-4 w-full min-w-0 mb-6">${acts}</div>
+                            <div class="flex flex-col w-full min-w-0 mb-6">${acts}</div>
                             
                             <div class="w-full min-w-0">
                                 <h4 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mb-3">Phase Description</h4>
-                                <p class="text-sm font-primary text-[#fafafa] block w-full break-words whitespace-normal min-w-0 leading-relaxed border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.desc', this)">${p.desc}</p>
+                                <p class="text-sm font-primary text-[#fafafa] block w-full break-normal whitespace-normal min-w-0 leading-relaxed border border-transparent focus:border-b-[#f15e27] outline-none transition-colors" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.desc', this)">${p.desc}</p>
                             </div>
                         </div>
                         <div class="space-y-8 w-full min-w-0">
                             <div class="w-full min-w-0">
                                 <h4 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mb-3">Target Audience</h4>
-                                <p class="text-sm font-primary text-[#fafafa] block w-full break-words whitespace-normal min-w-0 leading-relaxed border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.audience', this)">${p.audience}</p>
+                                <p class="text-sm font-primary text-[#fafafa] block w-full break-normal whitespace-normal min-w-0 leading-relaxed border border-transparent focus:border-b-[#f15e27] outline-none transition-colors" contenteditable="true" onblur="updateDB('months.${mIndex}.phases.${pIndex}.audience', this)">${p.audience}</p>
                             </div>
                             <div class="w-full min-w-0">
                                 <h4 class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mb-3">Key Metrics (KPIs)</h4>
@@ -1037,23 +1252,29 @@
                     </div>
                 </div>
                 `;
-            }).join('') : `<p class="text-[#a1a1aa] text-sm text-center py-10 bg-[#1a1a1c] rounded-xl border border-[#3f3f46]">No active phases for this timeline. Enable a month or add a phase.</p>`;
+            }).join('') : `<p class="text-[#a1a1aa] text-sm text-center py-10 bg-[#1a1a1c] rounded-2xl border border-[#3f3f46]">No active phases for this timeline. Enable a month or add a phase.</p>`;
 
             container.innerHTML = `
                 <div class="fade-in max-w-5xl mx-auto pb-12 w-full">
                     <div class="mb-8 w-full">
-                        <h2 class="text-4xl font-editorial italic mb-4 text-[#fafafa] block w-full break-words whitespace-normal" contenteditable="true">Strategic Roadmap</h2>
+                        <h2 class="text-4xl font-primary font-bold tracking-tight mb-4 text-[#fafafa] block w-full break-normal whitespace-normal outline-none" contenteditable="true">Strategic Roadmap</h2>
                         <div class="py-2 w-full mb-6">
-                            <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-words whitespace-normal min-w-0" contenteditable="true">
+                            <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-normal whitespace-normal min-w-0 outline-none transition-colors" contenteditable="true">
                                 Explore and edit the chronological deployment. Required deliverables and media are automatically generated from items linked to this phase.
                             </p>
                         </div>
                         
-                        <div class="bg-[#1a1a1c] border border-[#3f3f46] p-4 rounded-xl flex flex-wrap items-center gap-3 w-full no-print">
-                            <span class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mr-2">Timeline Settings:</span>
-                            ${monthToggles}
-                            <button onclick="window.openAddMonthModal()" class="px-4 py-2 text-[10px] font-tech uppercase tracking-widest border border-dashed border-[#5e5e63] text-[#a1a1aa] rounded-full hover:border-[#fafafa] hover:text-[#fafafa] transition-colors ml-auto">
-                                + Add Month
+                        <div class="bg-[#1a1a1c] border border-[#3f3f46] p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-4 w-full no-print shadow-sm">
+                            <div class="flex items-center gap-2">
+                                <span class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] whitespace-nowrap">Roadmap Months:</span>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 flex-grow">
+                                ${monthToggles}
+                            </div>
+                            
+                            <button onclick="window.openAddMonthModal()" class="flex items-center justify-center gap-2 bg-[#fafafa] hover:bg-[#d1d5db] text-[#0f0f10] px-6 py-3 rounded-full transition-colors whitespace-nowrap shadow-lg font-tech text-[10px] uppercase tracking-widest shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                <span>Enable Month</span>
                             </button>
                         </div>
                     </div>
@@ -1062,8 +1283,9 @@
                     
                     ${activeMonth && activeMonth.active ? `
                     <div class="w-full mb-6 flex justify-end no-print">
-                        <button onclick="window.addPhase(${mIndex})" class="bg-[#fafafa] text-[#0f0f10] hover:bg-[#d1d5db] font-tech text-[10px] uppercase tracking-widest px-6 py-3 rounded-full transition-colors whitespace-nowrap shadow-lg">
-                            + Add Phase to ${activeMonth.name}
+                        <button onclick="window.addPhase(${mIndex})" class="flex items-center justify-center gap-2 bg-[#fafafa] hover:bg-[#d1d5db] text-[#0f0f10] px-6 py-3 rounded-full transition-colors whitespace-nowrap shadow-lg font-tech text-[10px] uppercase tracking-widest">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <span>Add Phase to ${activeMonth.name}</span>
                         </button>
                     </div>` : ''}
 
@@ -1075,11 +1297,126 @@
         window.updateP = (id) => { state.monthId = id; navigate(state.view); };
 
         // View 3: Media Production
-        window.addProdProject = function() {
-            window.db.production.push({ id: Date.now(), phaseId: null, cat: "New Category", title: "New Project", desc: "Add details here.", date: "TBD", budget: "0" });
+        window.openAddProdModal = function() {
+            const nt = document.getElementById('newProdTitle'); if(nt) nt.value = '';
+            
+            const selectP = document.getElementById('newProdPhaseSelect');
+            if(selectP) {
+                const allPhases = [];
+                window.db.months.forEach(m => {
+                    if(m.active) m.phases.forEach(p => allPhases.push({ id: p.id, title: p.title, month: m.name }));
+                });
+                selectP.innerHTML = `<option value="null">-- Unassigned --</option>` + allPhases.map(p => `<option value="${p.id}">${p.title} (${p.month})</option>`).join('');
+            }
+            
+            const err = document.getElementById('addProdError'); if(err) err.classList.add('hidden');
+            const modal = document.getElementById('addProdModal'); if(modal) modal.classList.remove('hidden');
+        };
+
+        window.closeAddProdModal = function() {
+            const modal = document.getElementById('addProdModal');
+            if(modal) modal.classList.add('hidden');
+        };
+
+        window.saveNewProd = function() {
+            const titleEl = document.getElementById('newProdTitle');
+            const catEl = document.getElementById('newProdCat');
+            const phaseEl = document.getElementById('newProdPhaseSelect');
+            
+            const sdDay = document.getElementById('newProdStartDay').value;
+            const sdMonth = document.getElementById('newProdStartMonth').value;
+            const sdYear = document.getElementById('newProdStartYear').value;
+            
+            const edDay = document.getElementById('newProdEndDay').value;
+            const edMonth = document.getElementById('newProdEndMonth').value;
+            const edYear = document.getElementById('newProdEndYear').value;
+
+            const title = titleEl ? titleEl.value.trim() : "";
+            const cat = catEl ? catEl.value.trim() || "Pre-Production" : "Pre-Production";
+            const phaseIdRaw = phaseEl ? phaseEl.value : "null";
+
+            if(!title) {
+                const err = document.getElementById('addProdError');
+                if(err) err.classList.remove('hidden');
+                return;
+            }
+
+            window.db.production.push({
+                id: Date.now(),
+                phaseId: phaseIdRaw === "null" ? null : parseInt(phaseIdRaw),
+                cat: cat,
+                title: title,
+                desc: "Add project description here.",
+                startDate: `${sdMonth} ${sdDay}, ${sdYear}`,
+                endDate: `${edMonth} ${edDay}, ${edYear}`,
+                budget: 0
+            });
+
             autoSave();
+            closeAddProdModal();
             navigate(state.view);
-        }
+        };
+
+        window.openEditProdDateModal = function(index) {
+            const idxEl = document.getElementById('editProdDateIndex');
+            if(idxEl) idxEl.value = index;
+            
+            const p = window.db.production[index];
+            
+            // Parse Start Date
+            try {
+                if(p.startDate) {
+                    const sParts = p.startDate.replace(',', '').split(' ');
+                    const sdDay = document.getElementById('editProdStartDay'); if(sdDay && sParts[1]) sdDay.value = sParts[1].padStart(2, '0');
+                    const sdMonth = document.getElementById('editProdStartMonth');
+                    if(sdMonth && sParts[0]) {
+                        const smOptions = Array.from(sdMonth.options).map(o=>o.value);
+                        sdMonth.value = smOptions.find(o => o.toLowerCase() === sParts[0].substring(0,3).toLowerCase()) || 'Jan';
+                    }
+                    const sdYear = document.getElementById('editProdStartYear'); if(sdYear && sParts[2]) sdYear.value = sParts[2];
+                }
+            } catch(e) {}
+            
+            // Parse End Date
+            try {
+                if(p.endDate) {
+                    const eParts = p.endDate.replace(',', '').split(' ');
+                    const edDay = document.getElementById('editProdEndDay'); if(edDay && eParts[1]) edDay.value = eParts[1].padStart(2, '0');
+                    const edMonth = document.getElementById('editProdEndMonth');
+                    if(edMonth && eParts[0]) {
+                        const emOptions = Array.from(edMonth.options).map(o=>o.value);
+                        edMonth.value = emOptions.find(o => o.toLowerCase() === eParts[0].substring(0,3).toLowerCase()) || 'Jan';
+                    }
+                    const edYear = document.getElementById('editProdEndYear'); if(edYear && eParts[2]) edYear.value = eParts[2];
+                }
+            } catch(e) {}
+
+            const modal = document.getElementById('editProdDateModal');
+            if(modal) modal.classList.remove('hidden');
+        };
+
+        window.closeEditProdDateModal = function() {
+            const modal = document.getElementById('editProdDateModal');
+            if(modal) modal.classList.add('hidden');
+        };
+
+        window.saveEditedProdDate = function() {
+            const index = document.getElementById('editProdDateIndex').value;
+            const sdDay = document.getElementById('editProdStartDay').value;
+            const sdMonth = document.getElementById('editProdStartMonth').value;
+            const sdYear = document.getElementById('editProdStartYear').value;
+            
+            const edDay = document.getElementById('editProdEndDay').value;
+            const edMonth = document.getElementById('editProdEndMonth').value;
+            const edYear = document.getElementById('editProdEndYear').value;
+            
+            window.db.production[index].startDate = `${sdMonth} ${sdDay}, ${sdYear}`;
+            window.db.production[index].endDate = `${edMonth} ${edDay}, ${edYear}`;
+            
+            autoSave();
+            closeEditProdDateModal();
+            navigate(state.view);
+        };
 
         window.deleteProdProject = function(index) {
             window.db.production.splice(index, 1);
@@ -1099,33 +1436,54 @@
                 const phaseOptions = allPhases.map(ph => `<option value="${ph.id}" ${p.phaseId == ph.id ? 'selected' : ''}>${ph.title} (${ph.month})</option>`).join('');
 
                 return `
-                <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-xl p-6 md:p-8 hover:border-[#f15e27] transition-colors flex flex-col h-full w-full min-w-0 relative group break-inside-avoid">
-                    <button onclick="window.deleteProdProject(${i})" class="absolute top-4 right-4 text-[#5e5e63] hover:text-red-500 md:opacity-0 group-hover:opacity-100 transition-opacity text-xl font-bold leading-none w-8 h-8 rounded-full flex justify-center items-center pb-1 z-10 no-print">&times;</button>
+                <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-2xl p-5 sm:p-6 md:p-8 flex flex-col hover:border-[#5e5e63] transition-all relative group break-inside-avoid shadow-lg w-full min-w-0">
                     
-                    <span class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-2 border border-transparent focus:border-b-[#f15e27] w-fit" contenteditable="true" onblur="updateDB('production.${i}.cat', this)">${p.cat}</span>
-                    <h4 class="font-editorial italic text-3xl text-[#fafafa] mb-4 block w-full break-words whitespace-normal min-w-0 pr-6 border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('production.${i}.title', this)">${p.title}</h4>
+                    <!-- Actions -->
+                    <div class="absolute top-4 right-4 flex items-center gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity z-20 no-print">
+                        <button onclick="window.deleteProdProject(${i})" class="text-[#5e5e63] hover:text-red-500 bg-[#0f0f10] border border-[#3f3f46] rounded-full w-8 h-8 flex items-center justify-center transition-colors shadow-sm" title="Delete Project">&times;</button>
+                    </div>
                     
-                    <div class="flex items-center gap-2 mb-4 w-fit flex-wrap">
-                        <span class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest">Timeline:</span>
-                        <span class="font-tech text-[10px] text-[#fafafa] border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('production.${i}.date', this)">${p.date}</span>
+                    <!-- Header Section (Strict Block Stacking on Mobile to Prevent Squish) -->
+                    <div class="w-full mb-5 relative pr-12 flex flex-col gap-3">
+                        <div onclick="window.openEditProdDateModal(${i})" class="inline-flex flex-wrap items-center gap-1.5 w-fit max-w-full bg-[#0f0f10] border border-[#3f3f46] px-4 py-2 rounded-xl shadow-inner hover:border-[#f15e27] cursor-pointer transition-colors" title="Edit Timeline">
+                            <span class="font-tech text-xs text-[#f15e27] uppercase tracking-widest whitespace-nowrap">${p.startDate}</span>
+                            <span class="font-tech text-xs text-[#5e5e63] uppercase tracking-widest whitespace-nowrap">—</span>
+                            <span class="font-tech text-xs text-[#f15e27] uppercase tracking-widest whitespace-nowrap">${p.endDate}</span>
+                        </div>
+                        <div class="w-full flex flex-col min-w-0">
+                            <span class="font-tech text-[10px] text-[#a1a1aa] uppercase tracking-widest block mb-2 outline-none border-b border-transparent focus:border-b-[#f15e27] w-max transition-colors break-normal whitespace-normal" contenteditable="true" onblur="updateDB('production.${i}.cat', this)">${p.cat}</span>
+                            <h4 class="font-primary font-bold text-2xl text-[#fafafa] leading-tight mb-2 outline-none border-b border-transparent focus:border-b-[#f15e27] w-full break-normal whitespace-normal transition-colors" contenteditable="true" onblur="updateDB('production.${i}.title', this)">${p.title}</h4>
+                        </div>
                     </div>
 
-                    <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed flex-grow block w-full break-words whitespace-normal min-w-0 mb-6 border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('production.${i}.desc', this)">${p.desc}</p>
-                    
-                    <div class="pt-5 border-t border-[#3f3f46] mt-auto w-full min-w-0 flex justify-between items-center mb-4">
-                        <span class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] block">Allocated Budget</span>
-                        <p class="font-tech text-lg text-[#fafafa] flex items-center gap-1">
-                            <span class="text-[10px] text-[#a1a1aa] font-normal">INR</span> 
-                            <span class="border border-transparent focus:border-b-[#f15e27] min-w-[30px] text-right" contenteditable="true" onblur="updateProdBudget(${i}, this)">${formatINR(p.budget).replace('₹', '').trim()}</span>
-                        </p>
+                    <!-- Content Module -->
+                    <div class="flex-grow flex flex-col gap-3 w-full min-w-0">
+                        <div class="bg-[#0f0f10] border border-[#3f3f46] p-4 rounded-xl w-full min-w-0 transition-colors focus-within:border-[#5e5e63] flex-grow">
+                            <span class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
+                                Project Description
+                            </span>
+                            <p class="font-primary text-sm text-[#a1a1aa] leading-relaxed block w-full break-normal whitespace-normal outline-none min-w-0" contenteditable="true" onblur="updateDB('production.${i}.desc', this)">${p.desc}</p>
+                        </div>
                     </div>
+                    
+                    <!-- Footer (Budget & Link) -->
+                    <div class="w-full mt-5 pt-5 border-t border-[#3f3f46] min-w-0 flex flex-col gap-4">
+                        <div class="flex justify-between items-center w-full">
+                            <span class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] block">Allocated Budget</span>
+                            <p class="font-tech text-lg text-[#fafafa] flex items-center gap-1">
+                                <span class="text-[10px] text-[#a1a1aa] font-normal">INR</span> 
+                                <span class="border-b border-transparent focus:border-[#f15e27] min-w-[30px] text-right outline-none" contenteditable="true" onblur="updateProdBudget(${i}, this)">${formatINR(p.budget).replace('₹', '').trim()}</span>
+                            </p>
+                        </div>
 
-                    <div class="pt-4 border-t border-[#3f3f46] no-print w-full min-w-0">
-                        <span class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest block mb-2">Linked Strategic Phase</span>
-                        <select onchange="updateProductionPhase(${i}, this.value)" class="w-full bg-[#0f0f10] border border-[#3f3f46] text-[#fafafa] font-primary text-xs px-3 py-2 rounded focus:outline-none focus:border-[#f15e27] transition-colors cursor-pointer">
-                            <option value="null">-- Unassigned --</option>
-                            ${phaseOptions}
-                        </select>
+                        <div class="flex flex-col gap-2 pt-4 border-t border-[#3f3f46] no-print w-full min-w-0">
+                            <span class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest block">Link Strategic Phase</span>
+                            <select onchange="updateProductionPhase(${i}, this.value)" class="w-full truncate bg-[#0f0f10] border border-[#3f3f46] text-[#fafafa] font-primary text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-[#f15e27] transition-colors cursor-pointer text-left shadow-inner">
+                                <option value="null">-- Unassigned --</option>
+                                ${phaseOptions}
+                            </select>
+                        </div>
                     </div>
                 </div>
                 `;
@@ -1135,13 +1493,14 @@
                 <div class="fade-in max-w-7xl mx-auto pb-12 w-full">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 w-full gap-6">
                         <div class="w-full md:w-2/3">
-                            <h2 class="text-4xl font-editorial italic mb-4 text-[#fafafa] block w-full break-words whitespace-normal" contenteditable="true">Media Production</h2>
-                            <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-words whitespace-normal min-w-0" contenteditable="true">
+                            <h2 class="text-4xl font-primary font-bold tracking-tight mb-4 text-[#fafafa] block w-full break-normal whitespace-normal outline-none" contenteditable="true">Media Production</h2>
+                            <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-normal whitespace-normal min-w-0 outline-none transition-colors" contenteditable="true">
                                 Link physical shoots and post-production blocks to Strategic Phases to track requirements automatically.
                             </p>
                         </div>
-                        <button onclick="window.addProdProject()" class="bg-[#fafafa] text-[#0f0f10] hover:bg-[#d1d5db] font-tech text-[10px] uppercase tracking-widest px-6 py-3 rounded-full transition-colors whitespace-nowrap shadow-lg no-print">
-                            + Add Project
+                        <button onclick="window.openAddProdModal()" class="flex items-center justify-center gap-2 bg-[#fafafa] hover:bg-[#d1d5db] text-[#0f0f10] px-6 py-3.5 rounded-full transition-colors whitespace-nowrap shadow-lg font-tech text-[10px] uppercase tracking-widest shrink-0 no-print mt-2 md:mt-0 w-full sm:w-auto">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <span>Add Project</span>
                         </button>
                     </div>
                     
@@ -1154,51 +1513,125 @@
 
         // View 4: Deliverables Calendar
         window.openAddContentModal = function() {
-            document.getElementById('newDate').value = '';
-            document.getElementById('newTitle').value = '';
+            const nt = document.getElementById('newTime'); if(nt) nt.value = '';
+            const ntitle = document.getElementById('newTitle'); if(ntitle) ntitle.value = '';
             
-            const selectM = document.getElementById('newMonthSelect');
-            selectM.innerHTML = window.db.months.filter(m => m.active).map(m => `<option value="${m.name}">${m.name}</option>`).join('');
-
             const selectP = document.getElementById('newPhaseSelect');
-            const allPhases = [];
-            window.db.months.forEach(m => {
-                if(m.active) {
-                    m.phases.forEach(p => allPhases.push({ id: p.id, title: p.title, month: m.name }));
-                }
-            });
-            selectP.innerHTML = `<option value="null">-- Unassigned --</option>` + allPhases.map(p => `<option value="${p.id}">${p.title} (${p.month})</option>`).join('');
+            if(selectP) {
+                const allPhases = [];
+                window.db.months.forEach(m => {
+                    if(m.active) {
+                        m.phases.forEach(p => allPhases.push({ id: p.id, title: p.title, month: m.name }));
+                    }
+                });
+                selectP.innerHTML = `<option value="null">-- Unassigned --</option>` + allPhases.map(p => `<option value="${p.id}">${p.title} (${p.month})</option>`).join('');
+            }
 
-            document.getElementById('addError').classList.add('hidden');
-            document.getElementById('addContentModal').classList.remove('hidden');
+            const err = document.getElementById('addError'); if(err) err.classList.add('hidden');
+            const modal = document.getElementById('addContentModal'); if(modal) modal.classList.remove('hidden');
         };
 
         window.closeAddContentModal = function() {
-            document.getElementById('addContentModal').classList.add('hidden');
+            const modal = document.getElementById('addContentModal');
+            if(modal) modal.classList.add('hidden');
         };
 
         window.saveNewContent = function() {
-            const date = document.getElementById('newDate').value.trim();
-            const time = document.getElementById('newTime').value.trim() || "TBD";
-            const title = document.getElementById('newTitle').value.trim();
-            const month = document.getElementById('newMonthSelect').value;
-            const phaseIdRaw = document.getElementById('newPhaseSelect').value;
+            const day = document.getElementById('newDateDay').value;
+            const month = document.getElementById('newDateMonth').value;
+            const year = document.getElementById('newDateYear').value;
+            const dateStr = `${month} ${day}, ${year}`;
 
-            if(!date || !title) {
-                document.getElementById('addError').classList.remove('hidden');
+            const timeEl = document.getElementById('newTime');
+            const titleEl = document.getElementById('newTitle');
+            const phaseEl = document.getElementById('newPhaseSelect');
+            
+            const time = timeEl ? timeEl.value.trim() || "TBD" : "TBD";
+            const title = titleEl ? titleEl.value.trim() : "";
+            const phaseIdRaw = phaseEl ? phaseEl.value : "null";
+
+            if(!title) {
+                const err = document.getElementById('addError');
+                if(err) err.classList.remove('hidden');
                 return;
             }
 
+            const monthNamesFull = { 'Jan': 'January', 'Feb': 'February', 'Mar': 'March', 'Apr': 'April', 'May': 'May', 'Jun': 'June', 'Jul': 'July', 'Aug': 'August', 'Sep': 'September', 'Oct': 'October', 'Nov': 'November', 'Dec': 'December' };
+            const monthCat = `${monthNamesFull[month] || month} ${year}`;
+
+            let existingMonth = window.db.months.find(m => m.name.toLowerCase() === monthCat.toLowerCase());
+            if (!existingMonth) {
+                window.db.months.push({
+                    id: Date.now(),
+                    name: monthCat,
+                    active: true,
+                    phases: []
+                });
+                window.db.months.sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
+            }
+
             window.db.calendar.push({
-                m: month, 
+                m: monthCat, 
                 phaseId: phaseIdRaw === "null" ? null : parseInt(phaseIdRaw),
-                d: date, time: time, t: title,
+                d: dateStr, time: time, t: title,
                 v: "Add visual directive here...", r: "Add strategic rationale here...", c: "Draft copy here...",
                 plats: platformDefaults()
             });
 
             autoSave();
             closeAddContentModal();
+            navigate(state.view);
+        };
+
+        window.openEditDateModal = function(index, currentDate) {
+            const idxEl = document.getElementById('editDateIndex');
+            if(idxEl) idxEl.value = index;
+            
+            try {
+                const parts = currentDate.replace(',', '').split(' ');
+                if(parts.length >= 2) {
+                    const m = parts[0].substring(0,3); 
+                    const d = parts[1].padStart(2, '0');
+                    let y = "2026";
+                    if (parts.length >= 3) y = parts[2];
+                    
+                    const dayEl = document.getElementById('editDateDay');
+                    if(dayEl) dayEl.value = d;
+                    
+                    const monthEl = document.getElementById('editDateMonth');
+                    if(monthEl) {
+                        const options = Array.from(monthEl.options).map(o=>o.value);
+                        const matchedMonth = options.find(o => o.toLowerCase() === m.toLowerCase()) || 'Jan';
+                        monthEl.value = matchedMonth;
+                    }
+                    
+                    const yrSelect = document.getElementById('editDateYear');
+                    if(yrSelect) {
+                        if([...yrSelect.options].some(o=>o.value===y)) {
+                            yrSelect.value = y;
+                        }
+                    }
+                }
+            } catch(e) {}
+            
+            const modal = document.getElementById('editDateModal');
+            if(modal) modal.classList.remove('hidden');
+        };
+
+        window.closeEditDateModal = function() {
+            const modal = document.getElementById('editDateModal');
+            if(modal) modal.classList.add('hidden');
+        };
+
+        window.saveEditedDate = function() {
+            const index = document.getElementById('editDateIndex').value;
+            const day = document.getElementById('editDateDay').value;
+            const month = document.getElementById('editDateMonth').value;
+            const year = document.getElementById('editDateYear').value;
+            
+            window.db.calendar[index].d = `${month} ${day}, ${year}`;
+            autoSave();
+            closeEditDateModal();
             navigate(state.view);
         };
 
@@ -1252,7 +1685,6 @@
                 <button onclick="window.updateF('m', '${m}')" class="interactive-btn px-4 py-2.5 rounded-full font-tech text-[10px] uppercase tracking-widest border transition-colors shadow-sm ${state.monthFilter === m ? 'active' : 'bg-[#1a1a1c] text-[#a1a1aa] border-[#3f3f46] hover:border-[#f15e27]'}">${m}</button>
             `).join('');
 
-            // Build select options for phases
             const allPhases = [];
             window.db.months.forEach(m => {
                 if(m.active) {
@@ -1267,80 +1699,92 @@
             let gh = fd.map((i) => {
                 const pBadges = platformKeys.map(pk => {
                     const active = i.plats[pk];
-                    return `<button onclick="togglePlatform(${i.originalIndex}, '${pk}')" class="text-[9px] font-tech uppercase tracking-widest px-3 py-1.5 rounded transition-colors border ${active ? 'bg-[#f15e27] text-white border-[#f15e27] shadow-md' : 'bg-[#0f0f10] text-[#5e5e63] border-[#3f3f46] hover:border-[#a1a1aa] hover:text-[#fafafa]'}">${platformLabels[pk]}</button>`;
+                    return `<button onclick="togglePlatform(${i.originalIndex}, '${pk}')" class="text-[9px] font-tech uppercase tracking-widest px-3 py-1.5 rounded-full transition-colors border ${active ? 'bg-[#f15e27] text-white border-[#f15e27] shadow-[0_0_10px_rgba(241,94,39,0.2)]' : 'bg-[#0f0f10] text-[#5e5e63] border-[#3f3f46] hover:border-[#a1a1aa] hover:text-[#fafafa]'}">${platformLabels[pk]}</button>`;
                 }).join('');
 
                 const phaseOptions = allPhases.map(p => `<option value="${p.id}" ${i.phaseId == p.id ? 'selected' : ''}>${p.title} (${p.month})</option>`).join('');
 
                 return `
-                <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-xl p-6 md:p-8 flex flex-col hover:border-[#f15e27] transition-colors relative group break-inside-avoid shadow-sm w-full min-w-0"
+                <div class="bg-[#1a1a1c] border border-[#3f3f46] rounded-2xl p-5 sm:p-6 md:p-8 flex flex-col hover:border-[#5e5e63] transition-all relative group break-inside-avoid shadow-lg w-full min-w-0"
                      draggable="true" 
                      ondragstart="dragStart(event, ${i.originalIndex})" 
                      ondragover="dragOver(event)" 
                      ondragleave="dragLeave(event)"
                      ondrop="drop(event, ${i.originalIndex})">
                     
-                    <button onclick="deleteContent(${i.originalIndex})" class="absolute top-4 right-4 text-[#5e5e63] hover:text-red-500 md:opacity-0 group-hover:opacity-100 transition-opacity text-xl bg-[#0f0f10] rounded-full w-8 h-8 flex items-center justify-center border border-[#3f3f46] pb-1 no-print">&times;</button>
+                    <div class="absolute top-4 right-4 flex items-center gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity z-20 no-print">
+                        <button onclick="deleteContent(${i.originalIndex})" class="text-[#5e5e63] hover:text-red-500 bg-[#0f0f10] border border-[#3f3f46] rounded-full w-8 h-8 flex items-center justify-center transition-colors shadow-sm" title="Delete Deliverable">&times;</button>
+                    </div>
                     
-                    <div class="flex flex-col gap-4 mb-6 border-b border-[#3f3f46] pb-6 w-full min-w-0">
-                        <div class="flex flex-col w-full pr-6 min-w-0">
-                            <div class="flex flex-row items-center gap-2 mb-4 w-full flex-wrap min-w-0">
-                                <span class="font-tech text-[10px] text-[#fafafa] bg-[#0f0f10] border border-[#3f3f46] px-3 py-1.5 rounded whitespace-nowrap min-w-[30px]" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.d', this)">${i.d}</span> 
-                                <span class="text-[#f15e27] font-tech text-[10px]">&bull;</span> 
-                                <span class="font-tech text-[10px] text-[#a1a1aa] bg-[#0f0f10] border border-[#3f3f46] px-3 py-1.5 rounded whitespace-nowrap min-w-[30px]" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.time', this)">${i.time}</span>
-                            </div>
-                            <h4 class="font-primary font-bold text-2xl text-[#fafafa] block w-full break-words whitespace-normal border border-transparent focus:border-b-[#f15e27]" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.t', this)">${i.t}</h4>
+                    <div class="w-full mb-5 relative pr-12 flex flex-col gap-3">
+                        <div onclick="openEditDateModal(${i.originalIndex}, '${i.d}')" class="inline-flex w-fit bg-[#0f0f10] border border-[#3f3f46] px-4 py-2 rounded-xl text-center shadow-inner hover:border-[#f15e27] cursor-pointer transition-colors" title="Edit Date">
+                            <span class="font-tech text-xs text-[#f15e27] uppercase tracking-widest block outline-none whitespace-nowrap">${i.d}</span>
                         </div>
-                        
-                        <div class="flex flex-wrap gap-2 mt-2 w-full">
-                            ${pBadges}
+                        <div class="w-full flex flex-col min-w-0">
+                            <h4 class="font-primary font-bold text-2xl text-[#fafafa] leading-tight mb-1 outline-none border-b border-transparent focus:border-b-[#f15e27] w-full break-normal whitespace-normal transition-colors" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.t', this)">${i.t}</h4>
+                            <span class="font-tech text-[10px] text-[#a1a1aa] outline-none border-b border-transparent focus:border-b-[#f15e27] block w-full truncate transition-colors" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.time', this)">${i.time}</span>
                         </div>
                     </div>
                     
-                    <div class="flex-grow flex flex-col gap-5 mb-6 w-full min-w-0">
-                        <div class="w-full min-w-0">
-                            <span class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-2" contenteditable="true">Visual Directive</span>
-                            <p class="font-primary text-sm text-[#a1a1aa] leading-relaxed block w-full break-words whitespace-normal border border-transparent focus:border-b-[#f15e27] min-w-0" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.v', this)">${i.v}</p>
+                    <div class="flex flex-wrap gap-2 mb-6 w-full min-w-0">
+                        ${pBadges}
+                    </div>
+                    
+                    <div class="flex-grow flex flex-col gap-3 w-full min-w-0">
+                        <div class="bg-[#0f0f10] border border-[#3f3f46] p-4 rounded-xl w-full min-w-0 transition-colors focus-within:border-[#5e5e63]">
+                            <span class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                Visual Directive
+                            </span>
+                            <p class="font-primary text-sm text-[#a1a1aa] leading-relaxed block w-full break-normal whitespace-normal outline-none min-w-0" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.v', this)">${i.v}</p>
                         </div>
-                        <div class="w-full mt-2 min-w-0">
-                            <span class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest block mb-2" contenteditable="true">Strategic Purpose</span>
-                            <p class="font-primary text-sm text-[#a1a1aa] leading-relaxed focus-within:outline-none block w-full break-words whitespace-normal border border-transparent focus:border-b-[#f15e27] min-w-0" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.r', this)">${i.r}</p>
+                        
+                        <div class="bg-[#0f0f10] border border-[#3f3f46] p-4 rounded-xl w-full min-w-0 transition-colors focus-within:border-[#5e5e63]">
+                            <span class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                Strategic Purpose
+                            </span>
+                            <p class="font-primary text-sm text-[#a1a1aa] leading-relaxed outline-none block w-full break-normal whitespace-normal min-w-0" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.r', this)">${i.r}</p>
+                        </div>
+                        
+                        <div class="bg-[#0f0f10] border border-[#3f3f46] p-4 rounded-xl w-full min-w-0 transition-colors focus-within:border-[#5e5e63]">
+                            <span class="font-tech text-[10px] text-[#fafafa] uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                Proposed Copy
+                            </span>
+                            <p class="font-primary text-sm leading-relaxed text-[#fafafa] outline-none block w-full break-normal whitespace-normal min-w-0" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.c', this)">${i.c}</p>
                         </div>
                     </div>
                     
-                    <div class="w-full mt-auto border-t border-[#3f3f46] pt-6 min-w-0">
-                        <span class="font-tech text-[10px] text-[#f15e27] uppercase tracking-widest block mb-2" contenteditable="true">Proposed Copy</span>
-                        <p class="font-primary text-sm leading-relaxed text-[#fafafa] focus-within:outline-none block w-full break-words whitespace-normal border border-transparent focus:border-b-[#f15e27] pl-1 min-w-0 mb-4" contenteditable="true" onblur="updateDB('calendar.${i.originalIndex}.c', this)">"${i.c}"</p>
-                        
-                        <div class="pt-4 border-t border-[#3f3f46] no-print">
-                            <span class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest block mb-2">Linked Strategic Phase</span>
-                            <select onchange="updateCalendarPhase(${i.originalIndex}, this.value)" class="w-full bg-[#0f0f10] border border-[#3f3f46] text-[#fafafa] font-primary text-xs px-3 py-2 rounded focus:outline-none focus:border-[#f15e27] transition-colors cursor-pointer">
-                                <option value="null">-- Unassigned --</option>
-                                ${phaseOptions}
-                            </select>
-                        </div>
+                    <div class="w-full mt-5 pt-5 border-t border-[#3f3f46] min-w-0 flex flex-col gap-2 no-print">
+                        <span class="font-tech text-[10px] text-[#5e5e63] uppercase tracking-widest shrink-0 block">Link Strategic Phase</span>
+                        <select onchange="updateCalendarPhase(${i.originalIndex}, this.value)" class="w-full truncate bg-[#0f0f10] border border-[#3f3f46] text-[#fafafa] font-primary text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-[#f15e27] transition-colors cursor-pointer text-left shadow-inner">
+                            <option value="null">-- Unassigned --</option>
+                            ${phaseOptions}
+                        </select>
                     </div>
                 </div>
                 `;
             }).join('');
 
-            if(fd.length === 0) gh = `<div class="col-span-full text-center py-16 text-[#a1a1aa] bg-[#1a1a1c] rounded-xl border border-[#3f3f46] text-sm font-primary w-full">No deliverables scheduled for this timeframe.</div>`;
+            if(fd.length === 0) gh = `<div class="col-span-full text-center py-16 text-[#a1a1aa] bg-[#1a1a1c] rounded-2xl border border-[#3f3f46] text-sm font-primary w-full">No deliverables scheduled for this timeframe.</div>`;
 
             container.innerHTML = `
                 <div class="fade-in max-w-7xl mx-auto pb-12 w-full">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6 w-full">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 w-full gap-6">
                         <div class="w-full md:w-2/3">
-                            <h2 class="text-4xl font-editorial italic mb-4 text-[#fafafa] block w-full break-words whitespace-normal" contenteditable="true">Deliverables Calendar</h2>
-                            <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-words whitespace-normal py-2" contenteditable="true">
+                            <h2 class="text-4xl font-primary font-bold tracking-tight mb-4 text-[#fafafa] block w-full break-normal whitespace-normal outline-none" contenteditable="true">Deliverables Calendar</h2>
+                            <p class="text-sm font-primary text-[#a1a1aa] leading-relaxed block w-full break-normal whitespace-normal py-2 outline-none transition-colors" contenteditable="true">
                                 Review and manipulate the daily content cadence. You can link deliverables directly to Strategic Phases using the dropdowns. They will automatically be tagged in the Roadmap. 
                             </p>
                         </div>
-                        <button onclick="openAddContentModal()" class="bg-[#fafafa] text-[#0f0f10] hover:bg-[#d1d5db] font-tech text-[10px] uppercase tracking-widest px-6 py-3.5 rounded-full transition-colors whitespace-nowrap shrink-0 shadow-lg border border-transparent focus:outline-none no-print">
-                            + Add Deliverable
+                        <button onclick="openAddContentModal()" class="flex items-center justify-center gap-2 bg-[#fafafa] hover:bg-[#d1d5db] text-[#0f0f10] px-6 py-3.5 rounded-full transition-colors whitespace-nowrap shadow-lg font-tech text-[10px] uppercase tracking-widest shrink-0 w-full sm:w-auto mt-2 md:mt-0 no-print">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <span>Add Deliverable</span>
                         </button>
                     </div>
                     
-                    <div class="flex flex-wrap items-center gap-3 bg-[#1a1a1c] p-5 rounded-xl border border-[#3f3f46] mb-8 w-full shadow-sm no-print">
+                    <div class="flex flex-wrap items-center gap-3 bg-[#1a1a1c] p-5 rounded-2xl border border-[#3f3f46] mb-8 w-full shadow-sm no-print">
                         <span class="font-tech text-[10px] uppercase tracking-widest text-[#5e5e63] mr-2">Timeframe Filter:</span>
                         ${mBtns}
                     </div>
